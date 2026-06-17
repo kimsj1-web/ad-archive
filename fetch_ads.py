@@ -6,11 +6,12 @@ from datetime import datetime, timedelta
 # ── 설정 ────────────────────────────────────────────────────────────────────
 ACCESS_TOKEN  = os.environ["META_ACCESS_TOKEN"]
 AD_ACCOUNT_ID = os.environ["META_AD_ACCOUNT_ID"]
+MONTH_TAG     = os.environ.get("MONTH_TAG", "")
 DATE_START    = os.environ.get("DATE_START", "")
 DATE_STOP     = os.environ.get("DATE_STOP", "")
 
-API_VERSION = "v19.0"
-BASE_URL    = f"https://graph.facebook.com/{API_VERSION}"
+API_VERSION  = "v19.0"
+BASE_URL     = f"https://graph.facebook.com/{API_VERSION}"
 ARCHIVE_FILE = "archive.json"
 
 # ── 성과 등급 기준 ────────────────────────────────────────────────────────────
@@ -37,28 +38,41 @@ def api_get(url, params):
         raise
     return resp.json()
 
-# ── 광고 목록 전체 조회 (페이지네이션) ───────────────────────────────────────
-def fetch_ads():
+# ── 조회 기간 계산 ────────────────────────────────────────────────────────────
+def get_time_range():
+    if DATE_START and DATE_STOP:
+        return DATE_START, DATE_STOP
+    if MONTH_TAG:
+        yy, mm = MONTH_TAG.split(".")
+        year, month = int("20" + yy), int(mm)
+        start = datetime(year, month, 1)
+        end = datetime(year, month + 1, 1) - timedelta(days=1) if month < 12 else datetime(year + 1, 1, 1) - timedelta(days=1)
+        return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+    today = datetime.today()
+    return (today - timedelta(days=7)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
+
+# ── 광고 목록 조회 ────────────────────────────────────────────────────────────
+def fetch_ads(month_tag):
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/ads"
     params = {
         "fields": "id,name,creative{id}",
-        "filtering": json.dumps([{"field": "name", "operator": "CONTAIN", "value": "F_I"}]),
+        "filtering": json.dumps([
+            {"field": "name", "operator": "CONTAIN", "value": "F_I"},
+            {"field": "name", "operator": "CONTAIN", "value": month_tag},
+        ]),
         "limit": 500,
     }
     all_ads = []
     while True:
         data = api_get(url, params)
         all_ads.extend(data.get("data", []))
-        # 다음 페이지 있으면 계속
         next_url = data.get("paging", {}).get("next")
         if not next_url:
             break
-        # next URL에는 access_token 포함돼 있으므로 그대로 사용
-        url = next_url
-        params = {}  # next URL에 모든 파라미터 포함됨
+        url, params = next_url, {}
     return all_ads
 
-# ── 크리에이티브 이미지 개별 조회 ─────────────────────────────────────────────
+# ── 크리에이티브 이미지 조회 ──────────────────────────────────────────────────
 def fetch_creative_image(creative_id):
     if not creative_id:
         return ""
@@ -78,70 +92,86 @@ def fetch_creative_image(creative_id):
         print(f"    이미지 조회 실패 (creative {creative_id}): {e}")
     return ""
 
-# ── 인사이트 조회 ─────────────────────────────────────────────────────────────
-def fetch_insights(ad_id):
+# ── 인사이트 조회 (날짜별 — 집행일수 계산용) ──────────────────────────────────
+def fetch_insights(ad_id, date_start, date_stop):
     url = f"{BASE_URL}/{ad_id}/insights"
-
-    if DATE_START and DATE_STOP:
-        days = (datetime.strptime(DATE_STOP, "%Y-%m-%d") - datetime.strptime(DATE_START, "%Y-%m-%d")).days + 1
-        time_param = {"time_range": json.dumps({"since": DATE_START, "until": DATE_STOP})}
-    else:
-        days = 7
-        today = datetime.today()
-        time_param = {"time_range": json.dumps({
-            "since": (today - timedelta(days=7)).strftime("%Y-%m-%d"),
-            "until": today.strftime("%Y-%m-%d"),
-        })}
-
     params = {
         "fields": "spend,cpc,actions,cost_per_action_type,clicks",
-        **time_param,
+        "time_range": json.dumps({"since": date_start, "until": date_stop}),
+        "time_increment": 1,   # 날짜별로 분리해서 받기
     }
     try:
-        data = api_get(url, params).get("data", [])
-        return (data[0] if data else None), days
-    except Exception:
-        return None, days
+        rows = api_get(url, params).get("data", [])
+        if not rows:
+            return None
 
-# ── 누적 아카이브 로드 ────────────────────────────────────────────────────────
+        # spend > 0인 날만 집행일로 카운트
+        active_rows = [r for r in rows if float(r.get("spend", 0)) > 0]
+        if not active_rows:
+            return None
+
+        active_days = len(active_rows)
+        total_spend = sum(float(r.get("spend", 0)) for r in active_rows)
+        daily_spend = total_spend / active_days
+
+        # CPC, clicks, 전환은 전체 기간 합산
+        total_clicks = sum(float(r.get("clicks", 0)) for r in rows)
+        total_cpc    = total_spend / total_clicks if total_clicks else 0
+
+        # 전환 수: purchase 우선, 없으면 전체 액션 합산
+        conversions = 0
+        for r in rows:
+            actions = r.get("actions", [])
+            purchase = next((float(a["value"]) for a in actions if a["action_type"] == "purchase"), 0)
+            conversions += purchase if purchase else sum(float(a["value"]) for a in actions)
+
+        # 전환당 비용
+        cost_per_conv = total_spend / conversions if conversions else 0
+
+        # 전환률
+        conversion_rate = (conversions / total_clicks * 100) if total_clicks else 0
+
+        return {
+            "daily_spend":        daily_spend,
+            "active_days":        active_days,
+            "total_spend":        total_spend,
+            "cpc":                total_cpc,
+            "conversions":        conversions,
+            "cost_per_conversion": cost_per_conv,
+            "conversion_rate":    conversion_rate,
+        }
+    except Exception as e:
+        print(f"    인사이트 조회 실패: {e}")
+        return None
+
+# ── 누적 아카이브 로드/저장 ───────────────────────────────────────────────────
 def load_archive():
     if os.path.exists(ARCHIVE_FILE):
         with open(ARCHIVE_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
-# ── 누적 아카이브 저장 ────────────────────────────────────────────────────────
 def save_archive(archive):
     with open(ARCHIVE_FILE, "w", encoding="utf-8") as f:
         json.dump(archive, f, ensure_ascii=False, indent=2)
 
-# ── 새 결과를 기존 아카이브에 병합 ────────────────────────────────────────────
+# ── 누적 병합 ─────────────────────────────────────────────────────────────────
 def merge_archive(existing, new_results, period_label):
-    """
-    같은 광고(ad_name)가 이미 있으면:
-      - 더 높은 등급으로 업데이트
-      - 같은 등급이면 더 높은 일 광고비로 업데이트
-      - 조회 기간 목록에 현재 기간 추가
-    없으면 새로 추가
-    """
     grade_order = {"S급": 0, "A급": 1, "B급": 2}
     existing_map = {ad["name"]: ad for ad in existing}
 
     for new_ad in new_results:
         name = new_ad["name"]
-        new_ad["periods"] = [period_label]  # 이 실행의 기간 태그
+        new_ad["periods"] = [period_label]
 
         if name in existing_map:
             old = existing_map[name]
-            # 기간 누적
             if period_label not in old.get("periods", []):
                 old.setdefault("periods", []).append(period_label)
-            # 더 높은 등급/성과로 업데이트
             if grade_order.get(new_ad["grade"], 99) < grade_order.get(old["grade"], 99):
                 old.update({k: new_ad[k] for k in ["grade", "daily_spend", "cpc", "conversions", "cost_per_conversion", "conversion_rate"]})
             elif new_ad["grade"] == old["grade"] and new_ad["daily_spend"] > old["daily_spend"]:
                 old.update({k: new_ad[k] for k in ["daily_spend", "cpc", "conversions", "cost_per_conversion", "conversion_rate"]})
-            # 이미지가 없었으면 업데이트
             if not old.get("image_url") and new_ad.get("image_url"):
                 old["image_url"] = new_ad["image_url"]
         else:
@@ -154,14 +184,8 @@ def merge_archive(existing, new_results, period_label):
 # ── HTML 생성 ────────────────────────────────────────────────────────────────
 def build_html(ads_data):
     updated = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    # 포함된 조회 기간 목록 수집
-    all_periods = []
-    for ad in ads_data:
-        for p in ad.get("periods", []):
-            if p not in all_periods:
-                all_periods.append(p)
-    periods_str = " · ".join(sorted(all_periods)) if all_periods else "전체"
+    all_periods = sorted({p for ad in ads_data for p in ad.get("periods", [])})
+    periods_str = " · ".join(all_periods) if all_periods else "전체"
 
     cards_html = ""
     for ad in ads_data:
@@ -266,64 +290,56 @@ def build_html(ads_data):
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 def main():
-    period_label = f"{DATE_START}~{DATE_STOP}" if DATE_START and DATE_STOP else "최근7일"
-    print(f"📡 메타 광고 데이터 수집 중... ({period_label})")
+    if not MONTH_TAG:
+        print("❌ MONTH_TAG가 비어 있습니다. 예: 26.05")
+        return
 
-    ads = fetch_ads()
-    print(f"  → F_I 광고 {len(ads)}개 발견 (전체)")
+    date_start, date_stop = get_time_range()
+    print(f"📡 [{MONTH_TAG}] F_I 광고 수집 중... (성과 기간: {date_start} ~ {date_stop})")
+
+    ads = fetch_ads(MONTH_TAG)
+    print(f"  → [{MONTH_TAG}] F_I 광고 {len(ads)}개 발견")
 
     new_results = []
     for ad in ads:
-        ad_id   = ad["id"]
-        ad_name = ad["name"]
-
+        ad_id, ad_name = ad["id"], ad["name"]
         creative_id = ad.get("creative", {}).get("id", "")
-        print(f"  처리 중: {ad_name[:40]}...")
-        image_url = fetch_creative_image(creative_id)
+        print(f"  처리 중: {ad_name[:50]}...")
 
-        insights, days = fetch_insights(ad_id)
-        if not insights:
+        image_url = fetch_creative_image(creative_id)
+        metrics   = fetch_insights(ad_id, date_start, date_stop)
+
+        if not metrics:
             continue
 
-        total_spend = float(insights.get("spend", 0))
-        if total_spend == 0:
-            continue  # 해당 기간 집행 없음 스킵
-
-        daily_spend = total_spend / max(days, 1)
-        cpc         = float(insights.get("cpc", 0) or 0)
-        clicks      = float(insights.get("clicks", 0) or 0)
-
-        actions = insights.get("actions", [])
-        purchase = next((float(a["value"]) for a in actions if a["action_type"] == "purchase"), 0)
-        conversions = purchase if purchase else sum(float(a["value"]) for a in actions)
-
-        cpp_list = insights.get("cost_per_action_type", [])
-        cost_per_conv = float(cpp_list[0]["value"]) if cpp_list else (total_spend / conversions if conversions else 0)
-        conversion_rate = (conversions / clicks * 100) if clicks else 0
-
-        grade = get_grade(daily_spend)
+        grade = get_grade(metrics["daily_spend"])
         if grade is None:
             continue
 
+        print(f"    → {grade} | 일 평균 {metrics['daily_spend']:,.0f}원 ({metrics['active_days']}일 집행)")
+
         new_results.append({
-            "name": ad_name, "image_url": image_url, "grade": grade,
-            "daily_spend": daily_spend, "cpc": cpc,
-            "conversions": conversions, "cost_per_conversion": cost_per_conv,
-            "conversion_rate": conversion_rate,
+            "name":               ad_name,
+            "image_url":          image_url,
+            "grade":              grade,
+            "daily_spend":        metrics["daily_spend"],
+            "cpc":                metrics["cpc"],
+            "conversions":        metrics["conversions"],
+            "cost_per_conversion": metrics["cost_per_conversion"],
+            "conversion_rate":    metrics["conversion_rate"],
         })
 
-    print(f"  → 이번 기간 고효율 광고 {len(new_results)}개")
+    print(f"  → [{MONTH_TAG}] 고효율 광고 {len(new_results)}개 (S/A/B급)")
 
-    # 누적 병합
     existing = load_archive()
     print(f"  → 기존 아카이브 {len(existing)}개")
-    merged = merge_archive(existing, new_results, period_label)
+    merged = merge_archive(existing, new_results, MONTH_TAG)
     save_archive(merged)
     print(f"  → 병합 후 총 {len(merged)}개")
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(build_html(merged))
-    print("✅ index.html + archive.json 업데이트 완료")
+    print("✅ 완료")
 
 if __name__ == "__main__":
     main()
