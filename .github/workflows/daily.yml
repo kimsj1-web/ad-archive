@@ -1,17 +1,18 @@
 name: 광고 아카이브 자동 업데이트
 
 on:
-  schedule:
-    # 매일 오전 9시 (KST = UTC+9 → UTC 00:00)
-    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
+      month_tag:
+        description: "조회할 월 태그 (예: 26.05) — 광고명의 [26.05] 형식과 일치"
+        required: true
+        default: ""
       date_start:
-        description: "시작일 (YYYY-MM-DD), 비우면 최근 30일"
+        description: "성과 조회 시작일 (YYYY-MM-DD) — 비우면 MONTH_TAG 기준 월 전체"
         required: false
         default: ""
       date_stop:
-        description: "종료일 (YYYY-MM-DD)"
+        description: "성과 조회 종료일 (YYYY-MM-DD)"
         required: false
         default: ""
 
@@ -20,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write   # index.html 커밋을 위해 필요
+      contents: write
 
     steps:
       - name: 저장소 체크아웃
@@ -38,14 +39,15 @@ jobs:
         env:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          MONTH_TAG: ${{ github.event.inputs.month_tag }}
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
         run: python fetch_ads.py
 
-      - name: index.html 커밋 & 푸시
+      - name: 결과 커밋 & 푸시
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git diff --staged --quiet || git commit -m "chore: 광고 아카이브 자동 업데이트 $(date +'%Y-%m-%d %H:%M KST')"
+          git add index.html archive.json
+          git diff --staged --quiet || git commit -m "chore: [${{ github.event.inputs.month_tag }}] 광고 아카이브 업데이트 $(date +'%Y-%m-%d %H:%M KST')"
           git push
