@@ -120,12 +120,12 @@ def fetch_insights(ad_id, date_start, date_stop):
         total_clicks = sum(float(r.get("clicks", 0)) for r in rows)
         total_cpc    = total_spend / total_clicks if total_clicks else 0
 
-        # 전환 수: purchase 우선, 없으면 전체 액션 합산
+        # 전환 수: purchase 액션만 집계
         conversions = 0
         for r in rows:
-            actions = r.get("actions", [])
-            purchase = next((float(a["value"]) for a in actions if a["action_type"] == "purchase"), 0)
-            conversions += purchase if purchase else sum(float(a["value"]) for a in actions)
+            for a in r.get("actions", []):
+                if a["action_type"] == "purchase":
+                    conversions += float(a["value"])
 
         # 전환당 비용
         cost_per_conv = total_spend / conversions if conversions else 0
