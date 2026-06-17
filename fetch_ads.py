@@ -305,7 +305,8 @@ def main():
     ads = fetch_ads(MONTH_TAG)
     print(f"  → [{MONTH_TAG}] F_I 광고 {len(ads)}개 발견")
 
-    new_results = []
+    # 광고명별로 모든 후보 수집 (같은 이름 = 여러 광고 세트에 걸친 동일 소재)
+    raw = {}
     for ad in ads:
         ad_id, ad_name = ad["id"], ad["name"]
         creative_id = ad.get("creative", {}).get("id", "")
@@ -317,26 +318,35 @@ def main():
         if not metrics:
             continue
 
-        grade = get_grade(metrics["total_spend"])
+        candidate = {
+            "name":                ad_name,
+            "image_url":           image_url,
+            "total_spend":         metrics["total_spend"],
+            "daily_spend":         metrics["daily_spend"],
+            "active_days":         metrics["active_days"],
+            "cpc":                 metrics["cpc"],
+            "conversions":         metrics["conversions"],
+            "cost_per_conversion": metrics["cost_per_conversion"],
+            "conversion_rate":     metrics["conversion_rate"],
+        }
+        raw.setdefault(ad_name, []).append(candidate)
+
+    # 같은 광고명이 여러 개면 구매 수 기준 최고 성과만 선택
+    new_results = []
+    for ad_name, candidates in raw.items():
+        best = max(candidates, key=lambda x: x["conversions"])
+        if len(candidates) > 1:
+            print(f"  중복 {len(candidates)}개 → 최고 성과 선택: {ad_name[:40]} (구매 {best['conversions']:.0f}건)")
+
+        grade = get_grade(best["total_spend"])
         if grade is None:
             continue
 
-        print(f"    → {grade} | 총 {metrics['total_spend']:,.0f}원 / 일 평균 {metrics['daily_spend']:,.0f}원 ({metrics['active_days']}일 집행)")
+        best["grade"] = grade
+        print(f"    → {grade} | 총 {best['total_spend']:,.0f}원 / 구매 {best['conversions']:.0f}건 ({best['active_days']}일 집행)")
+        new_results.append(best)
 
-        new_results.append({
-            "name":               ad_name,
-            "image_url":          image_url,
-            "grade":              grade,
-            "total_spend":        metrics["total_spend"],
-            "daily_spend":        metrics["daily_spend"],
-            "active_days":        metrics["active_days"],
-            "cpc":                metrics["cpc"],
-            "conversions":        metrics["conversions"],
-            "cost_per_conversion": metrics["cost_per_conversion"],
-            "conversion_rate":    metrics["conversion_rate"],
-        })
-
-    print(f"  → [{MONTH_TAG}] 고효율 광고 {len(new_results)}개 (S/A/B급)")
+    print(f"  → [{MONTH_TAG}] 고효율 광고 {len(new_results)}개 (SS/S/A/B급)")
 
     existing = load_archive()
     print(f"  → 기존 아카이브 {len(existing)}개")
