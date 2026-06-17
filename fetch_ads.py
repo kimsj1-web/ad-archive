@@ -14,18 +14,20 @@ API_VERSION  = "v19.0"
 BASE_URL     = f"https://graph.facebook.com/{API_VERSION}"
 ARCHIVE_FILE = "archive.json"
 
-# ── 성과 등급 기준 ────────────────────────────────────────────────────────────
-def get_grade(daily_spend):
-    if daily_spend >= 5_000_000:
+# ── 성과 등급 기준 (총 광고비 기준) ──────────────────────────────────────────
+def get_grade(total_spend):
+    if total_spend >= 10_000_000:
+        return "SS급"
+    elif total_spend >= 5_000_000:
         return "S급"
-    elif daily_spend >= 3_000_000:
+    elif total_spend >= 3_000_000:
         return "A급"
-    elif daily_spend >= 1_000_000:
+    elif total_spend >= 1_000_000:
         return "B급"
     return None
 
 def get_grade_color(grade):
-    return {"S급": "#FF4B4B", "A급": "#FF9500", "B급": "#34C759"}.get(grade, "#8E8E93")
+    return {"SS급": "#BF5AF2", "S급": "#FF4B4B", "A급": "#FF9500", "B급": "#34C759"}.get(grade, "#8E8E93")
 
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
 def api_get(url, params):
@@ -157,7 +159,7 @@ def save_archive(archive):
 
 # ── 누적 병합 ─────────────────────────────────────────────────────────────────
 def merge_archive(existing, new_results, period_label):
-    grade_order = {"S급": 0, "A급": 1, "B급": 2}
+    grade_order = {"SS급": 0, "S급": 1, "A급": 2, "B급": 3}
     existing_map = {ad["name"]: ad for ad in existing}
 
     for new_ad in new_results:
@@ -178,7 +180,7 @@ def merge_archive(existing, new_results, period_label):
             existing_map[name] = new_ad
 
     merged = list(existing_map.values())
-    merged.sort(key=lambda x: (grade_order.get(x["grade"], 99), -x["daily_spend"]))
+    merged.sort(key=lambda x: (grade_order.get(x["grade"], 99), -x.get("total_spend", 0)))
     return merged
 
 # ── HTML 생성 ────────────────────────────────────────────────────────────────
@@ -203,6 +205,7 @@ def build_html(ads_data):
             <div class="card-body">
                 <p class="ad-name" title="{ad['name']}">{ad['name']}</p>
                 <div class="metrics">
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">{ad.get('total_spend', 0):,.0f}원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">{ad['daily_spend']:,.0f}원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">{ad['cpc']:,.0f}원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">{ad['conversions']:,.0f}</span></div>
@@ -262,6 +265,7 @@ def build_html(ads_data):
 </header>
 <div class="controls">
   <button class="filter-btn active" data-filter="all">전체</button>
+  <button class="filter-btn" data-filter="SS급">SS급</button>
   <button class="filter-btn" data-filter="S급">S급</button>
   <button class="filter-btn" data-filter="A급">A급</button>
   <button class="filter-btn" data-filter="B급">B급</button>
@@ -313,17 +317,19 @@ def main():
         if not metrics:
             continue
 
-        grade = get_grade(metrics["daily_spend"])
+        grade = get_grade(metrics["total_spend"])
         if grade is None:
             continue
 
-        print(f"    → {grade} | 일 평균 {metrics['daily_spend']:,.0f}원 ({metrics['active_days']}일 집행)")
+        print(f"    → {grade} | 총 {metrics['total_spend']:,.0f}원 / 일 평균 {metrics['daily_spend']:,.0f}원 ({metrics['active_days']}일 집행)")
 
         new_results.append({
             "name":               ad_name,
             "image_url":          image_url,
             "grade":              grade,
+            "total_spend":        metrics["total_spend"],
             "daily_spend":        metrics["daily_spend"],
+            "active_days":        metrics["active_days"],
             "cpc":                metrics["cpc"],
             "conversions":        metrics["conversions"],
             "cost_per_conversion": metrics["cost_per_conversion"],
