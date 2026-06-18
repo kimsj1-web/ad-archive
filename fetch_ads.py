@@ -160,7 +160,7 @@ def save_archive(archive):
     with open(ARCHIVE_FILE, "w", encoding="utf-8") as f:
         json.dump(archive, f, ensure_ascii=False, indent=2)
 
-# ── 누적 병합 ─────────────────────────────────────────────────────────────────
+# ── 누적 병합 (총 광고비 합산 기준) ──────────────────────────────────────────
 def merge_archive(existing, new_results, period_label):
     grade_order = {"SS급": 0, "S급": 1, "A급": 2, "B급": 3}
     existing_map = {ad["name"]: ad for ad in existing}
@@ -170,20 +170,42 @@ def merge_archive(existing, new_results, period_label):
         new_ad["periods"] = [period_label]
 
         if name in existing_map:
-            old = existing_map[name]
-            if period_label not in old.get("periods", []):
-                old.setdefault("periods", []).append(period_label)
-            if grade_order.get(new_ad["grade"], 99) < grade_order.get(old["grade"], 99):
-                old.update({k: new_ad[k] for k in ["grade", "daily_spend", "cpc", "conversions", "cost_per_conversion", "conversion_rate"]})
-            elif new_ad["grade"] == old["grade"] and new_ad["daily_spend"] > old["daily_spend"]:
-                old.update({k: new_ad[k] for k in ["daily_spend", "cpc", "conversions", "cost_per_conversion", "conversion_rate"]})
-            if not old.get("image_url") and new_ad.get("image_url"):
-                old["image_url"] = new_ad["image_url"]
+            rec = existing_map[name]
+
+            # 기간 태그 누적
+            if period_label not in rec.get("periods", []):
+                rec.setdefault("periods", []).append(period_label)
+
+            # 총 광고비 합산
+            rec["total_spend"] = rec.get("total_spend", 0) + new_ad.get("total_spend", 0)
+
+            # 집행일수 합산
+            rec["active_days"] = rec.get("active_days", 0) + new_ad.get("active_days", 0)
+
+            # 전환 수 합산
+            rec["conversions"] = rec.get("conversions", 0) + new_ad.get("conversions", 0)
+
+            # 일 평균 광고비, 전환당 비용 재계산
+            rec["daily_spend"] = rec["total_spend"] / rec["active_days"] if rec["active_days"] else 0
+            rec["cost_per_conversion"] = rec["total_spend"] / rec["conversions"] if rec["conversions"] else 0
+
+            # 합산된 총 광고비로 등급 재판정
+            new_grade = get_grade(rec["total_spend"])
+            if new_grade:
+                rec["grade"] = new_grade
+
+            # 게재 상태: 어느 하나라도 ACTIVE면 게재중
+            if new_ad.get("status") == "ACTIVE":
+                rec["status"] = "ACTIVE"
+
+            # 이미지 없으면 업데이트
+            if not rec.get("image_url") and new_ad.get("image_url"):
+                rec["image_url"] = new_ad["image_url"]
         else:
             existing_map[name] = new_ad
 
     merged = list(existing_map.values())
-    merged.sort(key=lambda x: (grade_order.get(x["grade"], 99), -x.get("total_spend", 0)))
+    merged.sort(key=lambda x: (grade_order.get(x.get("grade", "B급"), 99), -x.get("total_spend", 0)))
     return merged
 
 # ── HTML 생성 ────────────────────────────────────────────────────────────────
