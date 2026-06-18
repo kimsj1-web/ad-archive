@@ -13,24 +13,29 @@
   .header-left h1 { font-size:22px; font-weight:700; letter-spacing:-0.5px; }
   .header-left p { margin-top:4px; font-size:13px; color:var(--muted); }
   .updated { font-size:12px; color:var(--muted); }
-  .controls { padding:20px 32px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .controls { padding:16px 32px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .filter-label { font-size:11px; color:var(--muted); margin-right:2px; }
   .filter-btn { padding:6px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:13px; cursor:pointer; transition:all .15s; font-family:inherit; }
   .filter-btn:hover { border-color:#555; color:var(--text); }
   .filter-btn.active { background:var(--text); color:var(--bg); border-color:var(--text); font-weight:600; }
+  .divider { width:1px; height:20px; background:var(--border); margin:0 4px; }
   .count { margin-left:auto; font-size:13px; color:var(--muted); }
-  .gallery { padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
+  .product-filters { padding:10px 32px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .gallery { padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
   .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:transform .2s,box-shadow .2s; }
   .card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.4); }
-  .card-img { position:relative; aspect-ratio:1/1; background:#111; overflow:hidden; }
-  .card-img img { width:100%; height:100%; object-fit:cover; }
-  .no-img { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; }
+  .card-img { position:relative; background:#111; overflow:hidden; display:flex; align-items:center; justify-content:center; min-height:200px; }
+  .card-img img { width:100%; height:auto; display:block; object-fit:contain; }
+  .no-img { width:100%; height:200px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; }
   .grade-badge { position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }
   .card-body { padding:16px; }
-  .ad-name { font-size:12px; color:var(--muted); margin-bottom:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ad-name { font-size:11px; color:var(--muted); margin-bottom:12px; line-height:1.5; word-break:break-all; }
   .metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .metric { display:flex; flex-direction:column; gap:2px; }
   .metric .label { font-size:10px; color:var(--muted); letter-spacing:0.5px; }
-  .metric .value { font-size:14px; font-weight:600; }
+  .metric .value { font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px; }
+  .status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }
+  .status-txt { font-size:11px; font-weight:500; }
   .periods { margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }
   .period-tag { font-size:10px; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }
   .empty { grid-column:1/-1; text-align:center; padding:80px 0; color:var(--muted); }
@@ -42,63 +47,76 @@
     <h1>전환배너 고효율 광고 아카이브</h1>
     <p>광고명 F_I · 누적 조회: 26.06</p>
   </div>
-  <span class="updated">마지막 업데이트: 2026-06-18 02:44</span>
+  <span class="updated">마지막 업데이트: 2026-06-18 03:14</span>
 </header>
 <div class="controls">
-  <button class="filter-btn active" data-filter="all">전체</button>
-  <button class="filter-btn" data-filter="SS급">SS급</button>
-  <button class="filter-btn" data-filter="S급">S급</button>
-  <button class="filter-btn" data-filter="A급">A급</button>
-  <button class="filter-btn" data-filter="B급">B급</button>
+  <span class="filter-label">등급</span>
+  <button class="filter-btn grade-btn active" data-grade="all">전체</button>
+  <button class="filter-btn grade-btn" data-grade="SS급">SS급</button>
+  <button class="filter-btn grade-btn" data-grade="S급">S급</button>
+  <button class="filter-btn grade-btn" data-grade="A급">A급</button>
+  <button class="filter-btn grade-btn" data-grade="B급">B급</button>
   <span class="count" id="count"></span>
+</div>
+<div class="product-filters">
+  <span class="filter-label">제품군</span>
+  <button class="filter-btn product-btn active" data-product="all">전체</button>
+  <button class="filter-btn product-btn" data-product="빙과">빙과</button>
+  <button class="filter-btn product-btn" data-product="제과">제과</button>
 </div>
 <div class="gallery" id="gallery">
   
-        <div class="card" data-grade="SS급">
+        <div class="card" data-grade="SS급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-3.xx.fbcdn.net/v/t45.1600-4/714163087_122104412247320795_9083891020131131004_n.png?stp=dst-jpg_tt6&_nc_cat=100&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=44qf7bKNPCQQ7kNvwFE0Qds&_nc_oc=Adq7rk9ElfjTc1j0vsYrGZ6U5L5NR7iweawKtXhJq8MirR_v-3wq4u7OEaMur0NoHck&_nc_zt=1&_nc_ht=scontent-ord5-3.xx&edm=AAT1rw8EAAAA&_nc_gid=IJc-mhwEg93OSMgzHcexAQ&_nc_tpa=Q5bMBQH5ZuTgQdVrZYmaqKGZw5AzuDMXtLQDEJoDgkZa3SI2pKYNeoiceM3X3eTZJyv3-uJb0qc_wI_ItA&oh=00_Af_-goyWr6_o6tjsA_Rf4TDHyBwoQruWGWzRtJ6-zxIv0g&oe=6A38F14B" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/714163087_122104412247320795_9083891020131131004_n.png?stp=dst-jpg_tt6&_nc_cat=100&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=44qf7bKNPCQQ7kNvwFeTrt-&_nc_oc=Adoct9J6wmv4wP3eV9ASkqZsbOUo-LQuPjHTe8gKInVowH4h257v4tGDvUGFa76U2Do&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=BXwlP-x6hXftmjsfSLy8Nw&_nc_tpa=Q5bMBQH4VIGCLmTperaSlvULYyysNsU29RbKU9ECysSKr_co5bV7fDALfeIirYEHQhp6ksOZlhgRN5Z5ww&oh=00_Af-h3tqXNyA7STp6YTmCneipy5owX_Awj8LMOSV391ZIsQ&oe=6A39298B" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#BF5AF2">SS급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_P혼_전환_상시_혜택강조형__.배너_판매중단.현장감.안내문.원재료수급.물가안정.3일간100원.__박지연_260602_빙과_김민우">[26.06]F_I_P혼_전환_상시_혜택강조형__.배너_판매중단.현장감.안내문.원재료수급.물가안정.3일간100원.__박지연_260602_빙과_김민우</p>
+                <p class="ad-name">[26.06]F_I_P혼_전환_상시_혜택강조형__.배너_판매중단.현장감.안내문.원재료수급.물가안정.3일간100원.__박지연_260602_빙과_김민우</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">14,472,275원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">1,036,475원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">14,513,581원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">1,036,684원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">322원</span></div>
-                    <div class="metric"><span class="label">전환 수</span><span class="value">2,156</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">6,730원</span></div>
+                    <div class="metric"><span class="label">전환 수</span><span class="value">2,158</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">6,725원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">4.79%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">14일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">14일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="S급">
+        <div class="card" data-grade="S급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/716809622_122104769103320795_7278928894909706249_n.png?stp=dst-jpg_tt6&_nc_cat=108&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=eagLVravF5oQ7kNvwEHaYKn&_nc_oc=AdoLfEVgnIApuDOxZAyuwQSNfx73PSoTdjdO2kiQdLbtfBau-iDL_kPCtKvrVWdl5RU&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=CZ-RnecOWWMVlI0LLgd-pw&_nc_tpa=Q5bMBQEmW76-vAmL4x02SBwooyR43_sSLwmL0OFDgft659M6dTC83tW6709FaZBB8D0uTgMMt-VItVMfmQ&oh=00_Af9kUyOugEKpnTtYqzcXz8tn--vdWaF4-jGzte74K2oxkQ&oe=6A391BBA" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/716809622_122104769103320795_7278928894909706249_n.png?stp=dst-jpg_tt6&_nc_cat=108&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=eagLVravF5oQ7kNvwESlpTJ&_nc_oc=AdqolpUhBNBzGHBJRKPpzWyevgGGUsoocduSiz9Z9sdUTQmxdcPSKpevDwL8rLQ7DdI&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=opRWCZ4buG6RfMH1Xqw1FQ&_nc_tpa=Q5bMBQG4xbmIaYtgKLMUstnHgBcLZikVEcrBWEN2XSBkqD-XhURHG5pdTohpOKBrybvGMQbUM_lx5FBIIQ&oh=00_Af-KSrmSN18JcARL10RhyLXBQVrY33AOAE_JO1AnIsX5Ow&oe=6A391BBA" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#FF4B4B">S급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_실수상황극대화.페르소나.직원실수.안내문.편의점단독입점.가격실수안내.__김유진_260604_빙과_오형선">[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_실수상황극대화.페르소나.직원실수.안내문.편의점단독입점.가격실수안내.__김유진_260604_빙과_오형선</p>
+                <p class="ad-name">[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_실수상황극대화.페르소나.직원실수.안내문.편의점단독입점.가격실수안내.__김유진_260604_빙과_오형선</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">5,676,809원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">516,074원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">5,682,660원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">473,555원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">609원</span></div>
-                    <div class="metric"><span class="label">전환 수</span><span class="value">701</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,098원</span></div>
+                    <div class="metric"><span class="label">전환 수</span><span class="value">702</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,095원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">7.52%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">11일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">12일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="A급">
+        <div class="card" data-grade="A급" data-product="제과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/684909211_122104223691320795_2421368343832058146_n.png?stp=dst-jpg_tt6&_nc_cat=101&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=306BFgRozBQQ7kNvwElSq-j&_nc_oc=AdpW-QacNCkt1c6Efz2uwbvW1VZmwKgiPv5ZVltHYZKl1i_86jrf4vHwlSpKs48_ZOQ&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=xnODjlYcDa8QPJuTZRQAOg&_nc_tpa=Q5bMBQFNbI7Prl7UxjSzFMVtU0r43YbUjNaYYyp86YniFjvxaCepK0Z9CnprCohXHo2-jZoL4wuDK6WuWg&oh=00_Af-CxkDzA_vm6_VeDWGz0SWc5k0Q1tsISfFwIvPoirbt5A&oe=6A38F896" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/684909211_122104223691320795_2421368343832058146_n.png?stp=dst-jpg_tt6&_nc_cat=101&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=5jfPKNO1QxcQ7kNvwEobYiV&_nc_oc=AdpET1q00uXV1760T2VMgAmE0ofU3N3BEDybBmKK2eoNgG_KWLsVlmLZr08D3McbxMs&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=vuk8Jw8DGW0uVfdpPA0HFQ&_nc_tpa=Q5bMBQE3DQqvJnctv2KPGILCQLZja_karj7l_yEfEegEXcaKhlk_1Q4YZcpM-zhp4j5Xfy3vMnEn-XaaCw&oh=00_Af_skIMs6gg_706dWwrVpIw8PSYyD_PDiE6Jrf22rLpUdg&oe=6A3930D6" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#FF9500">A급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_PC혼_전환_제과7일특가_혜택강조형__.배너_개당10원.AI활용.다시는없어요.__박현지_260601_제과_김수정">[26.06]F_I_PC혼_전환_제과7일특가_혜택강조형__.배너_개당10원.AI활용.다시는없어요.__박현지_260601_제과_김수정</p>
+                <p class="ad-name">[26.06]F_I_PC혼_전환_제과7일특가_혜택강조형__.배너_개당10원.AI활용.다시는없어요.__박현지_260601_제과_김수정</p>
                 <div class="metrics">
                     <div class="metric"><span class="label">총 광고비</span><span class="value">4,630,554원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">661,508원</span></div>
@@ -106,56 +124,65 @@
                     <div class="metric"><span class="label">전환 수</span><span class="value">630</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">7,350원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">6.96%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">7일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">7일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="A급">
+        <div class="card" data-grade="A급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-3.xx.fbcdn.net/v/t45.1600-4/723456584_122106200559320795_5312653716917094256_n.png?stp=dst-jpg_tt6&_nc_cat=109&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=f7uYcHf-CXMQ7kNvwHDJejY&_nc_oc=Ado3RPRSRg3MtAixKXyJrtgEEDN2v1pblE8uWAwhr4_NJYKAUR8GcTCyDJvoyMemj_U&_nc_zt=1&_nc_ht=scontent-ord5-3.xx&edm=AAT1rw8EAAAA&_nc_gid=4gb8YaHyZPZDy9A-bqxOFQ&_nc_tpa=Q5bMBQH2Ir_3xlgsbATydSXdnEUNtr83OX2koW8jtMdek1rBEk1oMmSIyNv0xfd9knCNVYmpvcOebIHPgA&oh=00_Af98kWml9E_UwARCROh97TNtjfyzCrUCmNspnDKz36RHYw&oe=6A391C5D" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/723456584_122106200559320795_5312653716917094256_n.png?stp=dst-jpg_tt6&_nc_cat=109&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=f7uYcHf-CXMQ7kNvwF8FB0X&_nc_oc=AdpM1-e7j9xTl4byLe1ETFKHKch_q1fc5EouH4aQxf_mt8VHU0eoQSOeWQvTLPhI6ls&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=d3s8so_9cZmg37CNFwkgAw&_nc_tpa=Q5bMBQHwvmy03f4Vl6O698nO_Xdce4bj736BNlPDrabrMVXH4L48DmKrYUS1GI84Qmnmdwwz8Laig7jbuQ&oh=00_Af-meCRmWR2gqJZQhlpCxCq0vbnsPna08rfAdzcGKvMoOA&oe=6A391C5D" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#FF9500">A급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형_희소성_.배너_판매중단.후숙된찐한멜론맛그대로.공지문.현장감.__문선정_260612_빙과_오형선">[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형_희소성_.배너_판매중단.후숙된찐한멜론맛그대로.공지문.현장감.__문선정_260612_빙과_오형선</p>
+                <p class="ad-name">[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형_희소성_.배너_판매중단.후숙된찐한멜론맛그대로.공지문.현장감.__문선정_260612_빙과_오형선</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">4,165,395원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">694,232원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">4,165,679원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">595,097원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">649원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">607</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">6,862원</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">6,863원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">9.46%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">6일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">7일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-3.xx.fbcdn.net/v/t45.1600-4/711720234_122104769133320795_688292230042491898_n.png?stp=dst-jpg_tt6&_nc_cat=107&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=gZIynGK5KVIQ7kNvwHgNvuf&_nc_oc=AdroQz02tsYemrszUiWkXRK8Z1sY8thh-Yh-Viug9ZDNJ7pul70EIIGZ2xP9MnhOiTE&_nc_zt=1&_nc_ht=scontent-ord5-3.xx&edm=AAT1rw8EAAAA&_nc_gid=o677x4unoRO8b2mBCVlolQ&_nc_tpa=Q5bMBQG2TXjAlK9IiCsfbfE7yml9NIZJy9-xE7tcjlQGhYXrMAUAGVx2jZzVvs88rCZmDvNsfsTHoQPd_g&oh=00_Af_vtLM3r5CimDw3K8QtNrZ4SltoIZPBpzfV2P_dOdKt9w&oe=6A38F071" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/711720234_122104769133320795_688292230042491898_n.png?stp=dst-jpg_tt6&_nc_cat=107&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=gZIynGK5KVIQ7kNvwG3ZF33&_nc_oc=Adrk0fxiuPqanWSL6zXLMxrmgoNvvvy3ExauCMj7RbdwFkCSB9NEOAKGYzfzthsGrZQ&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=OoanI7FM-GDkTS5GTXRd8g&_nc_tpa=Q5bMBQE-7rilhl1CSZf0yla5uskUnsbhP-mMyfo43BzdMc4iYzuxFppygVaUPiroVxoJDzPRGfsvo4mHEQ&oh=00_Af9kcaxr5xv-LfDDBxJWdG7qHGTSwiWothHdFndkvVz1wg&oe=6A3928B1" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_공급자손해.지금이젤싸요.__김유진_260604_빙과_오형선">[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_공급자손해.지금이젤싸요.__김유진_260604_빙과_오형선</p>
+                <p class="ad-name">[26.06]F_I_JD멜_전환_쫀득바출시이벤트_혜택강조형__.배너_공급자손해.지금이젤싸요.__김유진_260604_빙과_오형선</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,715,751원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">226,313원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,715,937원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">208,918원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">1,210원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">377</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">7,204원</span></div>
-                    <div class="metric"><span class="label">전환률</span><span class="value">16.80%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">12일</span></div>
+                    <div class="metric"><span class="label">전환률</span><span class="value">16.79%</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">13일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="제과">
             <div class="card-img">
-                <img src="https://scontent-ord5-2.xx.fbcdn.net/v/t45.1600-4/712684079_122104394235320795_7193967911399307377_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=iYAXooc-86oQ7kNvwFvOrOf&_nc_oc=Adq-mE0abwhNkOxxKdsvKy9UolJx9EtemJO1O4cmnOm31T7uKQa5RWzan7jgbnEFDGc&_nc_zt=1&_nc_ht=scontent-ord5-2.xx&edm=AAT1rw8EAAAA&_nc_gid=ea1mekSmO3xEPVDrShcCzw&_nc_tpa=Q5bMBQHjbo_rAfnpFf-dQZxsvtdmRy8riiW3UEdfMcJhJCXKO81AKWxD4uA_guOkIUggx-Pew_psYw3V4A&oh=00_Af-EimWldXxGToFQaSOyKuQsYobpoDLW_7GZljRkIOkUGw&oe=6A39032D" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/712684079_122104394235320795_7193967911399307377_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=iYAXooc-86oQ7kNvwFkLwfk&_nc_oc=AdqDLCXA3onH5spPUjOuOakGls-DtEHVb42i9JY97KEAhJrDsr0ay5eBEfwSDRIlIU4&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=2-J7N3fLVAIRx5DRENb2mg&_nc_tpa=Q5bMBQGTexvKP0SWIyxb3rP2sQuBQ952AcWzwmoprQsR0986OuQfIs-S5BDfo98nViAgzStkJxa6az1UGg&oh=00_Af-5ZKkxNKkwl-qF0kIZNTN9xG_-PpX-uSKrrDoqWgQoyg&oe=6A393B6D" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_10원_.배너_360도.__박현지_260602_제과_김나현">[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_10원_.배너_360도.__박현지_260602_제과_김나현</p>
+                <p class="ad-name">[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_10원_.배너_360도.__박현지_260602_제과_김나현</p>
                 <div class="metrics">
                     <div class="metric"><span class="label">총 광고비</span><span class="value">2,691,624원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">897,208원</span></div>
@@ -163,94 +190,109 @@
                     <div class="metric"><span class="label">전환 수</span><span class="value">541</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">4,975원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">5.44%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">3일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">3일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-2.xx.fbcdn.net/v/t45.1600-4/716788301_122105085189320795_6720125756369427203_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=4CdDeCwco88Q7kNvwEBWRzO&_nc_oc=AdoY2FwqoSkJ29OqMOjxb3Dt0Gfm20NXU6k0uWVMTyQCu2_nCgAJrZGhkYl19vb4By8&_nc_zt=1&_nc_ht=scontent-ord5-2.xx&edm=AAT1rw8EAAAA&_nc_gid=C5KFNu7B8zDWHQXrBul9tg&_nc_tpa=Q5bMBQGAJMvSb4bJJ5z4DVcAbhttNfq6DWx9hcInxvqhU37ttBmFIuNIVl94vbtfsL4Lq8-Wl0GUFY674w&oh=00_Af94mQmR-UUcZdRM1Bqg4hE0WkTwv_QVcX1znRSN-q56Qw&oe=6A390166" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/716788301_122105085189320795_6720125756369427203_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=4CdDeCwco88Q7kNvwE4slS5&_nc_oc=AdqCBqOe6nk6ceCs5LWmAaSavFFUtO2maaK_ZDVFuZQijlAQ8NOpUBDX0YbRyokvs_o&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=M2bYfn5ZBWDk00qLzmKdvg&_nc_tpa=Q5bMBQHFgHSh5o2Ks71ybiA-gJw5vVZEgQv4rktqSyr4VVDdcIbKOB8XR8my-BtJeNq5Sw3Y4a6BnlHpNA&oh=00_Af8zYNdyHdNiYYxTtuCsrOibfVVS6BsqwkLhilZGRMqxgQ&oe=6A3939A6" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_DB딸_전환_듬뿍바출시이벤트_혜택강조형__.배너_가격비교.카페스무디1잔먹을가격에한달내내.판매중단강조.가격인상안내.현장감.내부유출.원가부터비싼제철딸기.__고가영_260605_빙과_오형선">[26.06]F_I_DB딸_전환_듬뿍바출시이벤트_혜택강조형__.배너_가격비교.카페스무디1잔먹을가격에한달내내.판매중단강조.가격인상안내.현장감.내부유출.원가부터비싼제철딸기.__고가영_260605_빙과_오형선</p>
+                <p class="ad-name">[26.06]F_I_DB딸_전환_듬뿍바출시이벤트_혜택강조형__.배너_가격비교.카페스무디1잔먹을가격에한달내내.판매중단강조.가격인상안내.현장감.내부유출.원가부터비싼제철딸기.__고가영_260605_빙과_오형선</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,551,837원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">212,662원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,552,283원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">212,690원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">1,178원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">318</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,025원</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,026원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">14.67%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">12일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">12일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/715098609_122229271466278937_6926765468472568012_n.png?stp=dst-jpg_tt6&_nc_cat=101&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=8eZKpjohC3wQ7kNvwGcKl2i&_nc_oc=AdpAhxLfPI1r1vwO7Jy7tBqboljaJfiN-sZqXlCg89cWkitqNx5k7Fo9aSyimxNJI8o&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=-g1BjgsrjB2KQF3sY6TRkQ&_nc_tpa=Q5bMBQEdpG2xh4hfNZQ-tqAf8pqHSg4nKxxHHDOmzdt6irtfe7ymT9N9whm9Tf207lpXP3PK8V1cY1Lf7Q&oh=00_Af_ue3movesdbTAMFbHCeTKluko6Kb9p-F-HvdCReViUdw&oe=6A38FF3B" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/715098609_122229271466278937_6926765468472568012_n.png?stp=dst-jpg_tt6&_nc_cat=101&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=8eZKpjohC3wQ7kNvwHcpEJC&_nc_oc=AdrBAk0t6jLSq0RIh9hDJ6BXpPp1ctWDFhY0zTvN2XHNzYIelmNmJtlPrLwIC7qijfY&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=vZBPC0aRVdOL6PALKUEAlw&_nc_tpa=Q5bMBQFFmw1M0NcSvuY_sqXVziy84FhH6w5XzGoWWwBApVBoedZgZu8QZtZu5XqHeWbHQqHtPu6VaEHe3w&oh=00_Af-7d_dey0gFAw5Ssr-J4zs-NPIEmNFgzKkdfXOZliGRfw&oe=6A39377B" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_P혼_전환_파인트990원_직원설득형__.배너_판매중단위기.대세감.수량제한.여름한정판매.최대5개990원.__박지연_260604_빙과_김민우">[26.06]F_I_P혼_전환_파인트990원_직원설득형__.배너_판매중단위기.대세감.수량제한.여름한정판매.최대5개990원.__박지연_260604_빙과_김민우</p>
+                <p class="ad-name">[26.06]F_I_P혼_전환_파인트990원_직원설득형__.배너_판매중단위기.대세감.수량제한.여름한정판매.최대5개990원.__박지연_260604_빙과_김민우</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,157,638원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">157,542원</span></div>
-                    <div class="metric"><span class="label">CPC</span><span class="value">567원</span></div>
-                    <div class="metric"><span class="label">전환 수</span><span class="value">248</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,894원</span></div>
-                    <div class="metric"><span class="label">전환률</span><span class="value">6.38%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">14일</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">2,216,642원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">158,332원</span></div>
+                    <div class="metric"><span class="label">CPC</span><span class="value">568원</span></div>
+                    <div class="metric"><span class="label">전환 수</span><span class="value">251</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,831원</span></div>
+                    <div class="metric"><span class="label">전환률</span><span class="value">6.43%</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">14일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/717280937_122229411308278937_6715731002267340536_n.png?stp=dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=CRnjOSVnozYQ7kNvwH6bw74&_nc_oc=AdqzGU3Y4CJkiZm4pRh8PRFiVnwB21TAttOOMVqUiC4rDk20oeoX0Fh-iHmGuUAi8cU&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=K0_dhrjn3kqAt_eeTEgeXw&_nc_tpa=Q5bMBQGWdJ0FqKyXsSEI6omDu1IV6IomjQSd8cINiSi2Lye0QKDnIWVxtn7LxJ36PqBuuXjKaejjQF7t6A&oh=00_Af_biVoEjvRWjmq1tB1fNHZGf18WoZm0Cw76QG1zt-xAfQ&oe=6A38F15F" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/717280937_122229411308278937_6715731002267340536_n.png?stp=dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=CRnjOSVnozYQ7kNvwHa1FCL&_nc_oc=Adr3qWMr-PGUExa2GM_jVVNjL5XyAeq7uALbXItFv4ZiMQlMD_k05Earz-VxyJU3iA8&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=BPggQY1EnWkPlZHnCKQhvg&_nc_tpa=Q5bMBQFHVHNxkUfu96rny26qJMri2CAksDt9FQhG1_4LmllnWjyaQSBEjh-B6iqd6A_Qz6WYvzuJGt5EuQ&oh=00_Af8vML5gsFz00F31P0BN-MYicXj8qv7xUsRD6cOH8vwSHA&oe=6A39299F" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_P애_전환_상시_혜택강조형_안내문_.배너_애플민트.가격인상안내.100.__박지연_260605_빙과_홍정민">[26.06]F_I_P애_전환_상시_혜택강조형_안내문_.배너_애플민트.가격인상안내.100.__박지연_260605_빙과_홍정민</p>
+                <p class="ad-name">[26.06]F_I_P애_전환_상시_혜택강조형_안내문_.배너_애플민트.가격인상안내.100.__박지연_260605_빙과_홍정민</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,501,453원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">167,392원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,508,386원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">167,598원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">1,030원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">189</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">7,971원</span></div>
-                    <div class="metric"><span class="label">전환률</span><span class="value">12.92%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">9일</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">7,981원</span></div>
+                    <div class="metric"><span class="label">전환률</span><span class="value">12.91%</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">9일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-2.xx.fbcdn.net/v/t45.1600-4/720031152_2835477970150403_6002584236485511073_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=aBRZt5SYsxoQ7kNvwFmcvUA&_nc_oc=AdqgX6CAvHT7AVPswWlql4YefdYlRoCBJBNhduHJetn4tsBdlAtu3TLSrqRtbQ5h1eE&_nc_zt=1&_nc_ht=scontent-ord5-2.xx&edm=AAT1rw8EAAAA&_nc_gid=ijT_4z48w1gDfHRqaDEcjQ&_nc_tpa=Q5bMBQHm-CUlb7_BKN9LcB7gJoOiceQUrDyklH_ly4d9TIISYt9HTrlw5waFJdV7DAJf-_7oyx21F21RCg&oh=00_Af-epOzYGagHfsvqeDeylBfRsyFmovwA5GLM4oH5pCYN6w&oe=6A390A57" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/720031152_2835477970150403_6002584236485511073_n.png?stp=dst-jpg_tt6&_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=aBRZt5SYsxoQ7kNvwFImUqG&_nc_oc=AdoVaewAnq-4tBbyeXVyC-Sb5HhbM8NVukJmBidLrywhdBSpYdeSQKtmVPwV2jqnNuQ&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=1lvMTIYJeu7asSB2W7iEjg&_nc_tpa=Q5bMBQGi_EbJRlHdpgVppRUoHI_9nnC5uHOtXtrgHHchc1gr5srliyVCI1Cmi4jys_a7iSLnXdYLKTH4_g&oh=00_Af-yp97ceGq0HGxNGIbzYAIMcE1xaVIrvRjDaE6WIk_Heg&oe=6A394297" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_안내문.혜택종료.990원증정종료안내.__박지연_260609_빙과_홍정민">[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_안내문.혜택종료.990원증정종료안내.__박지연_260609_빙과_홍정민</p>
+                <p class="ad-name">[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_안내문.혜택종료.990원증정종료안내.__박지연_260609_빙과_홍정민</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,358,686원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">154,044원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,392,073원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">154,675원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">398원</span></div>
                     <div class="metric"><span class="label">전환 수</span><span class="value">146</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">9,496원</span></div>
-                    <div class="metric"><span class="label">전환률</span><span class="value">4.19%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">9일</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">9,535원</span></div>
+                    <div class="metric"><span class="label">전환률</span><span class="value">4.17%</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">9일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/719209028_122105652993320795_8169881033916274928_n.png?stp=dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=Xlyyv9-_fWgQ7kNvwErSpji&_nc_oc=AdqI5y7mjHPHtLp-0lVWiBmO1SODRPIFu1Iq5LUSklMnbEc5vjseJP_sRkls6F3fx6w&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=D1tRvwXvWPKGYO35NmF3PA&_nc_tpa=Q5bMBQHm-m_tLSidieQIGGHMrTbyCS_XhVPmu7JgGPkcsSJdeC9ANGnGj8lk5zQNb4Fx4-nUqsdXMhvnjw&oh=00_Af-wbd0QZDMMjWxp2XPEmZBqB56UhZTb2ZfxMMotwUmyqw&oe=6A390FFC" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/719209028_122105652993320795_8169881033916274928_n.png?stp=dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=Xlyyv9-_fWgQ7kNvwH3zvf8&_nc_oc=Adp5ne2EUmv1MK65odeoySxDf2ZnDxKt5s0XlYMWRn6g2JLZW4zhgmkVDzYjdEuRoSQ&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=VRc61dXjdrp63WdHFXv1Gg&_nc_tpa=Q5bMBQEIJ1cJxOlubBW8W81vPua9P4I2EwXZV0lFFu49Eo4Pd0Zk_xIgri0InbJ1o7nL2e9dQSlW6PdH4g&oh=00_Af8WbR6zLaEV-jdHF0o9tKh3ZXeJSotcysUVM2y_DvhdTQ&oe=6A39483C" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_DB피_전환_듬뿍바출시이벤트_혜택강조형__.배너_판매중단.원재료가격인상.비싼제철과일듬뿍.공지문.일시판매중단예정안내.__고가영_260609_빙과_오형선">[26.06]F_I_DB피_전환_듬뿍바출시이벤트_혜택강조형__.배너_판매중단.원재료가격인상.비싼제철과일듬뿍.공지문.일시판매중단예정안내.__고가영_260609_빙과_오형선</p>
+                <p class="ad-name">[26.06]F_I_DB피_전환_듬뿍바출시이벤트_혜택강조형__.배너_판매중단.원재료가격인상.비싼제철과일듬뿍.공지문.일시판매중단예정안내.__고가영_260609_빙과_오형선</p>
                 <div class="metrics">
                     <div class="metric"><span class="label">총 광고비</span><span class="value">1,325,707원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">147,301원</span></div>
@@ -258,18 +300,21 @@
                     <div class="metric"><span class="label">전환 수</span><span class="value">163</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">8,133원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">14.89%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">9일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">9일 <span class="status-dot" style="background:#8A8A9A"></span><span class="status-txt" style="color:#8A8A9A">게재완료</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="제과">
             <div class="card-img">
-                <img src="https://scontent-ord5-1.xx.fbcdn.net/v/t45.1600-4/715389838_122104911375320795_4759459195136656963_n.png?stp=dst-jpg_tt6&_nc_cat=106&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=YmOdCFUVxVkQ7kNvwFUGp78&_nc_oc=Ado8e_BbCQpn9CbcZCRPSSJMto1JzGaAZoKmnSylyVzRAfTYscfFBPYIW7iFlzg0HME&_nc_zt=1&_nc_ht=scontent-ord5-1.xx&edm=AAT1rw8EAAAA&_nc_gid=waILpSC-TFtFYtxj-bLI7A&_nc_tpa=Q5bMBQFeyDu45jYTCqQc9NgeA2kBX425nk_29g7-OUGqnK1by4ihxAweC223rPPryH6yYcpDkz2i5lrq1g&oh=00_Af8rJh0If3_HelBHOOKaPeZnnB2Nlbdyr_inM9Pc8JxCtA&oe=6A3915A6" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc3-1.xx.fbcdn.net/v/t45.1600-4/715389838_122104911375320795_4759459195136656963_n.png?stp=dst-jpg_tt6&_nc_cat=106&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=YmOdCFUVxVkQ7kNvwFKQuol&_nc_oc=Ado4w-tJYJmzgY8VfUeoRpfjzyaO-fHY4vB6TLEu3szt4BBQqEipqNVUg0NRz8L5kIM&_nc_zt=1&_nc_ht=scontent-sjc3-1.xx&edm=AAT1rw8EAAAA&_nc_gid=2jg3BQfLvkA2Hf7DzuX8bQ&_nc_tpa=Q5bMBQGVadJZRSCiRLvfYwtO2YplO3hUx2wKBWICFKKBaOcZU_yR8V3UZHDKV9g69iFONK8aCWYgKIAF6Q&oh=00_Af9rmVmB9jFdY-44pNo5JEhkGS4skQFKOnJ59bL20FOaqw&oe=6A394DE6" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_안내문_.배너_10원.할인이벤트.현장감.__박현지_260605_제과_김나현">[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_안내문_.배너_10원.할인이벤트.현장감.__박현지_260605_제과_김나현</p>
+                <p class="ad-name">[26.06]F_I_제혼_전환_제과7일특가_혜택강조형_안내문_.배너_10원.할인이벤트.현장감.__박현지_260605_제과_김나현</p>
                 <div class="metrics">
                     <div class="metric"><span class="label">총 광고비</span><span class="value">1,093,718원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">364,573원</span></div>
@@ -277,26 +322,32 @@
                     <div class="metric"><span class="label">전환 수</span><span class="value">163</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">6,710원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">12.20%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">3일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">3일 <span class="status-dot" style="background:#8A8A9A"></span><span class="status-txt" style="color:#8A8A9A">게재완료</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
         </div>
-        <div class="card" data-grade="B급">
+        <div class="card" data-grade="B급" data-product="빙과">
             <div class="card-img">
-                <img src="https://scontent-ord5-3.xx.fbcdn.net/v/t45.1600-4/721332665_122105788497320795_8000788529497013028_n.png?stp=dst-jpg_tt6&_nc_cat=107&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=exUO20f-GdcQ7kNvwEXXYoi&_nc_oc=AdpOuh5JIH8wmKKzJrCF6900VYbn0X1uyTY7Pln1D-AO8iEDuiG6Q9_opEA75hEH7NQ&_nc_zt=1&_nc_ht=scontent-ord5-3.xx&edm=AAT1rw8EAAAA&_nc_gid=IJ9amty18Z3kGOa7z0947Q&_nc_tpa=Q5bMBQEWuZCxJcGce0IJq9XqtbosM3-JmRB6Q9yDINUzZT2yaHMddoLchwLV5S7oZOAgZ2FqkBBpAaDQ_g&oh=00_Af9wE5LxAybGJ__SsLfT2p7V5DLu-eDsD1-xzpDdWMZsuw&oe=6A39149E" alt="광고 이미지" onerror="this.style.display='none'">
+                <img src="https://scontent-sjc6-1.xx.fbcdn.net/v/t45.1600-4/721332665_122105788497320795_8000788529497013028_n.png?stp=dst-jpg_tt6&_nc_cat=107&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=exUO20f-GdcQ7kNvwGAzi8h&_nc_oc=AdqOD2plNR2eJW2E7L1ffNsJyyFL8vxL-fu0uFIROxfR12jtrQpQJC9GQ7g9mXR0QSU&_nc_zt=1&_nc_ht=scontent-sjc6-1.xx&edm=AAT1rw8EAAAA&_nc_gid=z9grf49BMo2Bqgl8-r0dnA&_nc_tpa=Q5bMBQFphvgIeuiSeVRzFKnPr7cnsai-_W5jMx_K9RcHZy104FVODVJIhGExqBlP2wrpDCUO0OhNRh2axw&oh=00_Af9mfNqg44rbMgPuK-bvgKbFQPvGOOibg-rpXL9aR6w20Q&oe=6A394CDE" alt="광고 이미지" onerror="this.style.display='none'">
                 <span class="grade-badge" style="background:#34C759">B급</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_손해심리자극.희소성강조.수량제한.비밀링크.타임특가.죄송합니다없어집니다.990원.__박지연_260610_빙과_김민우">[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_손해심리자극.희소성강조.수량제한.비밀링크.타임특가.죄송합니다없어집니다.990원.__박지연_260610_빙과_김민우</p>
+                <p class="ad-name">[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_손해심리자극.희소성강조.수량제한.비밀링크.타임특가.죄송합니다없어집니다.990원.__박지연_260610_빙과_김민우</p>
                 <div class="metrics">
-                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,024,937원</span></div>
-                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">146,420원</span></div>
+                    <div class="metric"><span class="label">총 광고비</span><span class="value">1,027,819원</span></div>
+                    <div class="metric"><span class="label">일 평균 광고비</span><span class="value">146,831원</span></div>
                     <div class="metric"><span class="label">CPC</span><span class="value">1,093원</span></div>
-                    <div class="metric"><span class="label">전환 수</span><span class="value">118</span></div>
-                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,686원</span></div>
-                    <div class="metric"><span class="label">전환률</span><span class="value">12.58%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">7일</span></div>
+                    <div class="metric"><span class="label">전환 수</span><span class="value">119</span></div>
+                    <div class="metric"><span class="label">전환당 비용</span><span class="value">8,637원</span></div>
+                    <div class="metric"><span class="label">전환률</span><span class="value">12.66%</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">7일 <span class="status-dot" style="background:#34C759"></span><span class="status-txt" style="color:#34C759">게재중</span></span>
+                    </div>
                 </div>
                 <div class="periods"><span class="period-tag">26.06</span></div>
             </div>
@@ -305,16 +356,38 @@
 <script>
   const cards = [...document.querySelectorAll('.card')];
   const countEl = document.getElementById('count');
-  function updateCount(n) { countEl.textContent = n + '개'; }
-  updateCount(cards.length);
-  document.querySelectorAll('.filter-btn').forEach(btn => {
+  let activeGrade = 'all';
+  let activeProduct = 'all';
+
+  function applyFilters() {
+    let v = 0;
+    cards.forEach(c => {
+      const gradeOk = activeGrade === 'all' || c.dataset.grade === activeGrade;
+      const productOk = activeProduct === 'all' || c.dataset.product === activeProduct;
+      const show = gradeOk && productOk;
+      c.style.display = show ? '' : 'none';
+      if (show) v++;
+    });
+    countEl.textContent = v + '개';
+  }
+
+  applyFilters();
+
+  document.querySelectorAll('.grade-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const f = btn.dataset.filter;
-      let v = 0;
-      cards.forEach(c => { const show = f==='all'||c.dataset.grade===f; c.style.display=show?'':'none'; if(show)v++; });
-      updateCount(v);
+      activeGrade = btn.dataset.grade;
+      applyFilters();
+    });
+  });
+
+  document.querySelectorAll('.product-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeProduct = btn.dataset.product;
+      applyFilters();
     });
   });
 </script>
