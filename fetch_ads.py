@@ -60,7 +60,7 @@ def get_time_range():
 def fetch_ads(month_tag):
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/ads"
     params = {
-        "fields": "id,name,creative{id}",
+        "fields": "id,name,status,creative{id}",
         "filtering": json.dumps([
             {"field": "name", "operator": "CONTAIN", "value": "F_I"},
             {"field": "name", "operator": "CONTAIN", "value": month_tag},
@@ -187,6 +187,13 @@ def merge_archive(existing, new_results, period_label):
     return merged
 
 # ── HTML 생성 ────────────────────────────────────────────────────────────────
+def get_product(name):
+    if "빙과" in name:
+        return "빙과"
+    if "제과" in name:
+        return "제과"
+    return "기타"
+
 def build_html(ads_data):
     updated = datetime.now().strftime("%Y-%m-%d %H:%M")
     all_periods = sorted({p for ad in ads_data for p in ad.get("periods", [])})
@@ -198,15 +205,20 @@ def build_html(ads_data):
         img = ad.get("image_url", "")
         img_tag = f'<img src="{img}" alt="광고 이미지" onerror="this.style.display=\'none\'">' if img else '<div class="no-img">이미지 없음</div>'
         periods_tag = " ".join(f'<span class="period-tag">{p}</span>' for p in ad.get("periods", []))
+        product = get_product(ad["name"])
+        status = ad.get("status", "")
+        is_active = status == "ACTIVE"
+        status_label = "게재중" if is_active else "게재완료"
+        status_color = "#34C759" if is_active else "#8A8A9A"
 
         cards_html += f"""
-        <div class="card" data-grade="{ad['grade']}">
+        <div class="card" data-grade="{ad['grade']}" data-product="{product}">
             <div class="card-img">
                 {img_tag}
                 <span class="grade-badge" style="background:{grade_color}">{ad['grade']}</span>
             </div>
             <div class="card-body">
-                <p class="ad-name" title="{ad['name']}">{ad['name']}</p>
+                <p class="ad-name">{ad['name']}</p>
                 <div class="metrics">
                     <div class="metric"><span class="label">총 광고비</span><span class="value">{ad.get('total_spend', 0):,.0f}원</span></div>
                     <div class="metric"><span class="label">일 평균 광고비</span><span class="value">{ad['daily_spend']:,.0f}원</span></div>
@@ -214,7 +226,10 @@ def build_html(ads_data):
                     <div class="metric"><span class="label">전환 수</span><span class="value">{ad['conversions']:,.0f}</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">{ad['cost_per_conversion']:,.0f}원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">{ad['conversion_rate']:.2f}%</span></div>
-                    <div class="metric"><span class="label">집행일수</span><span class="value">{int(ad.get('active_days', 0))}일</span></div>
+                    <div class="metric">
+                        <span class="label">집행일수</span>
+                        <span class="value">{int(ad.get('active_days', 0))}일 <span class="status-dot" style="background:{status_color}"></span><span class="status-txt" style="color:{status_color}">{status_label}</span></span>
+                    </div>
                 </div>
                 <div class="periods">{periods_tag}</div>
             </div>
@@ -235,24 +250,29 @@ def build_html(ads_data):
   .header-left h1 {{ font-size:22px; font-weight:700; letter-spacing:-0.5px; }}
   .header-left p {{ margin-top:4px; font-size:13px; color:var(--muted); }}
   .updated {{ font-size:12px; color:var(--muted); }}
-  .controls {{ padding:20px 32px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
+  .controls {{ padding:16px 32px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
+  .filter-label {{ font-size:11px; color:var(--muted); margin-right:2px; }}
   .filter-btn {{ padding:6px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:13px; cursor:pointer; transition:all .15s; font-family:inherit; }}
   .filter-btn:hover {{ border-color:#555; color:var(--text); }}
   .filter-btn.active {{ background:var(--text); color:var(--bg); border-color:var(--text); font-weight:600; }}
+  .divider {{ width:1px; height:20px; background:var(--border); margin:0 4px; }}
   .count {{ margin-left:auto; font-size:13px; color:var(--muted); }}
-  .gallery {{ padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }}
+  .product-filters {{ padding:10px 32px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
+  .gallery {{ padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }}
   .card {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:transform .2s,box-shadow .2s; }}
   .card:hover {{ transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.4); }}
-  .card-img {{ position:relative; aspect-ratio:1/1; background:#111; overflow:hidden; }}
-  .card-img img {{ width:100%; height:100%; object-fit:cover; }}
-  .no-img {{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; }}
+  .card-img {{ position:relative; background:#111; overflow:hidden; display:flex; align-items:center; justify-content:center; min-height:200px; }}
+  .card-img img {{ width:100%; height:auto; display:block; object-fit:contain; }}
+  .no-img {{ width:100%; height:200px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; }}
   .grade-badge {{ position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }}
   .card-body {{ padding:16px; }}
-  .ad-name {{ font-size:12px; color:var(--muted); margin-bottom:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+  .ad-name {{ font-size:11px; color:var(--muted); margin-bottom:12px; line-height:1.5; word-break:break-all; }}
   .metrics {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
   .metric {{ display:flex; flex-direction:column; gap:2px; }}
   .metric .label {{ font-size:10px; color:var(--muted); letter-spacing:0.5px; }}
-  .metric .value {{ font-size:14px; font-weight:600; }}
+  .metric .value {{ font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px; }}
+  .status-dot {{ width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }}
+  .status-txt {{ font-size:11px; font-weight:500; }}
   .periods {{ margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }}
   .period-tag {{ font-size:10px; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }}
   .empty {{ grid-column:1/-1; text-align:center; padding:80px 0; color:var(--muted); }}
@@ -267,12 +287,19 @@ def build_html(ads_data):
   <span class="updated">마지막 업데이트: {updated}</span>
 </header>
 <div class="controls">
-  <button class="filter-btn active" data-filter="all">전체</button>
-  <button class="filter-btn" data-filter="SS급">SS급</button>
-  <button class="filter-btn" data-filter="S급">S급</button>
-  <button class="filter-btn" data-filter="A급">A급</button>
-  <button class="filter-btn" data-filter="B급">B급</button>
+  <span class="filter-label">등급</span>
+  <button class="filter-btn grade-btn active" data-grade="all">전체</button>
+  <button class="filter-btn grade-btn" data-grade="SS급">SS급</button>
+  <button class="filter-btn grade-btn" data-grade="S급">S급</button>
+  <button class="filter-btn grade-btn" data-grade="A급">A급</button>
+  <button class="filter-btn grade-btn" data-grade="B급">B급</button>
   <span class="count" id="count"></span>
+</div>
+<div class="product-filters">
+  <span class="filter-label">제품군</span>
+  <button class="filter-btn product-btn active" data-product="all">전체</button>
+  <button class="filter-btn product-btn" data-product="빙과">빙과</button>
+  <button class="filter-btn product-btn" data-product="제과">제과</button>
 </div>
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(일 광고비 100만원 이상)을 충족하는 F_I 광고가 없습니다.</div>'}
@@ -280,16 +307,38 @@ def build_html(ads_data):
 <script>
   const cards = [...document.querySelectorAll('.card')];
   const countEl = document.getElementById('count');
-  function updateCount(n) {{ countEl.textContent = n + '개'; }}
-  updateCount(cards.length);
-  document.querySelectorAll('.filter-btn').forEach(btn => {{
+  let activeGrade = 'all';
+  let activeProduct = 'all';
+
+  function applyFilters() {{
+    let v = 0;
+    cards.forEach(c => {{
+      const gradeOk = activeGrade === 'all' || c.dataset.grade === activeGrade;
+      const productOk = activeProduct === 'all' || c.dataset.product === activeProduct;
+      const show = gradeOk && productOk;
+      c.style.display = show ? '' : 'none';
+      if (show) v++;
+    }});
+    countEl.textContent = v + '개';
+  }}
+
+  applyFilters();
+
+  document.querySelectorAll('.grade-btn').forEach(btn => {{
     btn.addEventListener('click', () => {{
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const f = btn.dataset.filter;
-      let v = 0;
-      cards.forEach(c => {{ const show = f==='all'||c.dataset.grade===f; c.style.display=show?'':'none'; if(show)v++; }});
-      updateCount(v);
+      activeGrade = btn.dataset.grade;
+      applyFilters();
+    }});
+  }});
+
+  document.querySelectorAll('.product-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeProduct = btn.dataset.product;
+      applyFilters();
     }});
   }});
 </script>
@@ -321,9 +370,11 @@ def main():
         if not metrics:
             continue
 
+        ad_status = ad.get("status", "")
         candidate = {
             "name":                ad_name,
             "image_url":           image_url,
+            "status":              ad_status,
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
             "active_days":         metrics["active_days"],
