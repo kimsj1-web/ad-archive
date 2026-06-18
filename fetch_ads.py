@@ -48,7 +48,10 @@ def get_time_range():
         yy, mm = MONTH_TAG.split(".")
         year, month = int("20" + yy), int(mm)
         start = datetime(year, month, 1)
-        end = datetime(year, month + 1, 1) - timedelta(days=1) if month < 12 else datetime(year + 1, 1, 1) - timedelta(days=1)
+        month_end = datetime(year, month + 1, 1) - timedelta(days=1) if month < 12 else datetime(year + 1, 1, 1) - timedelta(days=1)
+        today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+        # 진행 중인 달이면 오늘까지만, 지난 달이면 월말까지
+        end = min(month_end, today)
         return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
     today = datetime.today()
     return (today - timedelta(days=7)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
