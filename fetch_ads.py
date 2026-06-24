@@ -339,7 +339,7 @@ def build_html(ads_data):
         status_color = "#34C759" if is_active else "#8A8A9A"
 
         cards_html += f"""
-        <div class="card{' has-video' if is_video and video else (' has-permalink' if is_video and video_permalink else '')}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_type}"{card_click_attr}>
+        <div class="card{' has-video' if is_video and video else (' has-permalink' if is_video and video_permalink else '')}" data-grade="{ad['grade']}" data-product="{product}" data-media="{ad.get('grade_type', media_type)}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
@@ -553,10 +553,16 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         if not metrics:
             continue
 
+        # F_I + 릴스: 영상으로 가져오되 등급/필터는 이미지 기준
+        is_reels = (media_tag == "F_I" and "릴스" in ad_name)
+        actual_media_type = "video" if is_reels else media_type  # 미디어 fetch용
+        grade_type = "image" if (media_type == "image" or is_reels) else "video"  # 등급/필터용
+
         candidate = {
             "name":                ad_name,
             "creative_id":         creative_id,
-            "media_type":          media_type,
+            "media_type":          actual_media_type,
+            "grade_type":          grade_type,
             "status":              ad.get("status", ""),
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
@@ -574,21 +580,25 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         if len(candidates) > 1:
             print(f"  중복 {len(candidates)}개 → 최고 성과 선택: {ad_name[:40]} (구매 {best['conversions']:.0f}건)")
 
-        # 2. 등급 판정
-        grade = get_grade(best["total_spend"], media_type)
+        # 2. 등급 판정 (릴스는 이미지 기준 적용)
+        actual_type = best["media_type"]
+        grade_type = best.pop("grade_type", actual_type)
+        grade = get_grade(best["total_spend"], grade_type)
         if grade is None:
             continue
 
         # 3. 등급 통과한 것만 이미지/영상 다운로드
-        print(f"    → {grade} | 총 {best['total_spend']:,.0f}원 / 구매 {best['conversions']:.0f}건 ({best['active_days']}일 집행)")
+        is_reels_type = (actual_type == "video" and media_tag == "F_I")
+        type_label = "릴스(영상/이미지등급)" if is_reels_type else actual_type
+        print(f"    → {grade} | 총 {best['total_spend']:,.0f}원 / 구매 {best['conversions']:.0f}건 ({best['active_days']}일 집행) [{type_label}]")
         creative_id = best.pop("creative_id")
-        media = fetch_creative_media(creative_id, media_type)
+        media = fetch_creative_media(creative_id, actual_type)
 
         img_filename = safe_filename(ad_name, "thumb", "jpg")
         local_img = download_media(media["image_url"], img_filename)
 
         local_video = ""
-        if media_type == "video" and media["video_url"]:
+        if actual_type == "video" and media["video_url"]:
             vid_filename = safe_filename(ad_name, "video", "mp4")
             local_video = download_media(media["video_url"], vid_filename)
 
