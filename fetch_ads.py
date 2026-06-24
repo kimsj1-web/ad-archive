@@ -98,7 +98,7 @@ def fetch_creative_media(creative_id, media_type):
     반환: {"image_url": 썸네일 또는 이미지 URL, "video_url": 영상 소스 URL(영상만)}
     media_type: 'image' 또는 'video'
     """
-    result = {"image_url": "", "video_url": ""}
+    result = {"image_url": "", "video_url": "", "video_permalink": ""}
     if not creative_id:
         return result
     try:
@@ -112,7 +112,9 @@ def fetch_creative_media(creative_id, media_type):
                                   spec.get("video_data", {}).get("image_url", "")
             video_id = spec.get("video_data", {}).get("video_id", "")
             if video_id:
-                result["video_url"] = fetch_video_source(video_id)
+                video_info = fetch_video_source(video_id)
+                result["video_url"] = video_info["source"]
+                result["video_permalink"] = video_info["permalink"]
                 # 썸네일이 아직 없으면 영상 객체에서 가져오기
                 if not result["image_url"]:
                     result["image_url"] = fetch_video_thumbnail(video_id)
@@ -130,12 +132,16 @@ def fetch_creative_media(creative_id, media_type):
 
 # ── 영상 소스 URL 조회 ────────────────────────────────────────────────────────
 def fetch_video_source(video_id):
+    """영상 다운로드 URL + 메타 영상 페이지 URL 반환"""
     try:
-        data = api_get(f"{BASE_URL}/{video_id}", {"fields": "source"})
-        return data.get("source", "")
+        data = api_get(f"{BASE_URL}/{video_id}", {"fields": "source,permalink_url"})
+        return {
+            "source": data.get("source", ""),
+            "permalink": f"https://www.facebook.com{data['permalink_url']}" if data.get("permalink_url") else ""
+        }
     except Exception as e:
         print(f"    영상 소스 조회 실패 (video {video_id}): {e}")
-        return ""
+        return {"source": "", "permalink": ""}
 
 # ── 영상 썸네일 조회 ──────────────────────────────────────────────────────────
 def fetch_video_thumbnail(video_id):
@@ -158,9 +164,6 @@ def download_media(url, filename):
         return ""
     os.makedirs(IMAGES_DIR, exist_ok=True)
     filepath = os.path.join(IMAGES_DIR, filename)
-    # 이미 다운로드된 파일이면 스킵
-    if os.path.exists(filepath):
-        return filepath
     try:
         resp = requests.get(url, timeout=30, stream=True)
         resp.raise_for_status()
@@ -285,6 +288,8 @@ def merge_archive(existing, new_results, period_label):
                 rec["image_url"] = new_ad["image_url"]
             if not rec.get("video_url") and new_ad.get("video_url"):
                 rec["video_url"] = new_ad["video_url"]
+            if not rec.get("video_permalink") and new_ad.get("video_permalink"):
+                rec["video_permalink"] = new_ad["video_permalink"]
         else:
             existing_map[name] = new_ad
 
@@ -334,7 +339,7 @@ def build_html(ads_data):
         status_color = "#34C759" if is_active else "#8A8A9A"
 
         cards_html += f"""
-        <div class="card{' has-video' if is_video and video else ''}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_type}"{card_click_attr}>
+        <div class="card{' has-video' if is_video and video else (' has-permalink' if is_video and video_permalink else '')}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_type}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
@@ -499,6 +504,7 @@ def build_html(ads_data):
   const modalVideo = document.getElementById('modalVideo');
   const modalClose = document.getElementById('modalClose');
 
+  // 저장된 영상 → 모달 재생
   document.querySelectorAll('.card.has-video').forEach(card => {{
     card.addEventListener('click', () => {{
       const src = card.dataset.video;
@@ -506,6 +512,15 @@ def build_html(ads_data):
       modalVideo.src = src;
       modal.classList.add('open');
       modalVideo.play().catch(() => {{}});
+    }});
+  }});
+
+  // 다운로드 불가 영상 → 메타 페이지로 이동
+  document.querySelectorAll('.card.has-permalink').forEach(card => {{
+    card.addEventListener('click', () => {{
+      const url = card.dataset.permalink;
+      if (!url) return;
+      window.open(url, '_blank');
     }});
   }});
 
@@ -533,25 +548,14 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         creative_id = ad.get("creative", {}).get("id", "")
         print(f"  처리 중: {ad_name[:50]}...")
 
-        media = fetch_creative_media(creative_id, media_type)
+        # 1. 인사이트 먼저 조회
         metrics = fetch_insights(ad_id, date_start, date_stop)
         if not metrics:
             continue
 
-        # 이미지/영상 로컬 저장
-        img_ext = "jpg"
-        img_filename = safe_filename(ad_name, "thumb", img_ext)
-        local_img = download_media(media["image_url"], img_filename)
-
-        local_video = ""
-        if media_type == "video" and media["video_url"]:
-            vid_filename = safe_filename(ad_name, "video", "mp4")
-            local_video = download_media(media["video_url"], vid_filename)
-
         candidate = {
             "name":                ad_name,
-            "image_url":           local_img if local_img else media["image_url"],
-            "video_url":           local_video if local_video else media["video_url"],
+            "creative_id":         creative_id,
             "media_type":          media_type,
             "status":              ad.get("status", ""),
             "total_spend":         metrics["total_spend"],
@@ -569,11 +573,29 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         best = max(candidates, key=lambda x: x["conversions"])
         if len(candidates) > 1:
             print(f"  중복 {len(candidates)}개 → 최고 성과 선택: {ad_name[:40]} (구매 {best['conversions']:.0f}건)")
+
+        # 2. 등급 판정
         grade = get_grade(best["total_spend"], media_type)
         if grade is None:
             continue
-        best["grade"] = grade
+
+        # 3. 등급 통과한 것만 이미지/영상 다운로드
         print(f"    → {grade} | 총 {best['total_spend']:,.0f}원 / 구매 {best['conversions']:.0f}건 ({best['active_days']}일 집행)")
+        creative_id = best.pop("creative_id")
+        media = fetch_creative_media(creative_id, media_type)
+
+        img_filename = safe_filename(ad_name, "thumb", "jpg")
+        local_img = download_media(media["image_url"], img_filename)
+
+        local_video = ""
+        if media_type == "video" and media["video_url"]:
+            vid_filename = safe_filename(ad_name, "video", "mp4")
+            local_video = download_media(media["video_url"], vid_filename)
+
+        best["image_url"] = local_img if local_img else media["image_url"]
+        best["video_url"] = local_video if local_video else media["video_url"]
+        best["video_permalink"] = media.get("video_permalink", "")
+        best["grade"] = grade
         new_results.append(best)
 
     print(f"  → [{month_tag}] {media_tag} 고효율 광고 {len(new_results)}개")
