@@ -18,6 +18,11 @@ IMAGES_DIR   = "images"  # 이미지/영상 저장 폴더
 
 # ── 성과 등급 기준 (총 광고비 기준) ──────────────────────────────────────────
 def get_grade(total_spend, media_type="image"):
+    if media_type == "쩜오건":
+        # 쩜오건(F_V): 총 광고비 50만원 이상만 수집
+        if total_spend >= 500_000:
+            return "쩜오건"
+        return None
     if media_type == "video":
         # 영상: 성공(1,000만원↑) / 불씨(400만원↑)
         if total_spend >= 10_000_000:
@@ -41,6 +46,7 @@ def get_grade_color(grade):
     return {
         "SS급": "#BF5AF2", "S급": "#FF4B4B", "A급": "#FF9500", "B급": "#34C759",
         "성공": "#007AFF", "불씨": "#FF6B00",
+        "쩜오건": "#00C4B4",
     }.get(grade, "#8E8E93")
 
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
@@ -71,15 +77,19 @@ def get_time_range():
     return (today - timedelta(days=7)).strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
 
 # ── 광고 목록 조회 ────────────────────────────────────────────────────────────
-def fetch_ads(month_tag, media_tag):
-    """media_tag: 'F_I'(이미지) 또는 'F_V'(영상)"""
+def fetch_ads(month_tag, media_tag, extra_keyword=""):
+    """media_tag: 'F_I'(이미지) 또는 'F_V'(영상)
+    extra_keyword: 광고명에 추가로 포함되어야 하는 키워드(예: '쩜오건')"""
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/ads"
+    filtering = [
+        {"field": "name", "operator": "CONTAIN", "value": media_tag},
+        {"field": "name", "operator": "CONTAIN", "value": month_tag},
+    ]
+    if extra_keyword:
+        filtering.append({"field": "name", "operator": "CONTAIN", "value": extra_keyword})
     params = {
         "fields": "id,name,status,creative{id}",
-        "filtering": json.dumps([
-            {"field": "name", "operator": "CONTAIN", "value": media_tag},
-            {"field": "name", "operator": "CONTAIN", "value": month_tag},
-        ]),
+        "filtering": json.dumps(filtering),
         "limit": 500,
     }
     all_ads = []
@@ -274,8 +284,9 @@ def merge_archive(existing, new_results, period_label):
             rec["daily_spend"] = rec["total_spend"] / rec["active_days"] if rec["active_days"] else 0
             rec["cost_per_conversion"] = rec["total_spend"] / rec["conversions"] if rec["conversions"] else 0
 
-            # 합산된 총 광고비로 등급 재판정
-            new_grade = get_grade(rec["total_spend"], rec.get("media_type", "image"))
+            # 합산된 총 광고비로 등급 재판정 (grade_type 기준)
+            regrade_type = rec.get("grade_type", rec.get("media_type", "image"))
+            new_grade = get_grade(rec["total_spend"], regrade_type)
             if new_grade:
                 rec["grade"] = new_grade
 
@@ -316,6 +327,7 @@ def build_html(ads_data):
         grade_color = get_grade_color(ad["grade"])
         img = ad.get("image_url", "")
         video = ad.get("video_url", "")
+        video_permalink = ad.get("video_permalink", "")
         media_type = ad.get("media_type", "image")
         is_video = media_type == "video"
 
@@ -324,12 +336,21 @@ def build_html(ads_data):
         else:
             img_tag = '<div class="no-img">미리보기 없음</div>'
 
-        # 영상이면 재생 오버레이 추가 (클릭 시 모달)
+        # 영상이면 재생 오버레이 추가 (다운로드 영상 → 모달, 없으면 메타 페이지로)
         play_overlay = ""
         card_click_attr = ""
+        card_classes = "card"
         if is_video and video:
             play_overlay = '<div class="play-icon">▶</div>'
             card_click_attr = f' data-video="{video}"'
+            card_classes += " has-video"
+        elif is_video and video_permalink:
+            play_overlay = '<div class="play-icon">▶</div>'
+            card_click_attr = f' data-permalink="{video_permalink}"'
+            card_classes += " has-permalink"
+
+        # 유형 필터값: category > grade_type > media_type 순으로 사용
+        media_filter = ad.get("category", ad.get("grade_type", media_type))
 
         periods_tag = " ".join(f'<span class="period-tag">{p}</span>' for p in ad.get("periods", []))
         product = get_product(ad["name"])
@@ -339,7 +360,7 @@ def build_html(ads_data):
         status_color = "#34C759" if is_active else "#8A8A9A"
 
         cards_html += f"""
-        <div class="card{' has-video' if is_video and video else (' has-permalink' if is_video and video_permalink else '')}" data-grade="{ad['grade']}" data-product="{product}" data-media="{ad.get('grade_type', media_type)}"{card_click_attr}>
+        <div class="{card_classes}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_filter}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
@@ -423,8 +444,10 @@ def build_html(ads_data):
 </header>
 <div class="controls">
   <span class="filter-label">유형</span>
-  <button class="filter-btn media-btn active" data-media="image">이미지</button>
+  <button class="filter-btn media-btn active" data-media="all">전체</button>
+  <button class="filter-btn media-btn" data-media="image">이미지</button>
   <button class="filter-btn media-btn" data-media="video">영상</button>
+  <button class="filter-btn media-btn" data-media="쩜오건">쩜오건</button>
   <div class="divider"></div>
   <span class="filter-label">등급</span>
   <button class="filter-btn grade-btn active" data-grade="all">전체</button>
@@ -432,16 +455,7 @@ def build_html(ads_data):
   <button class="filter-btn grade-btn" data-grade="S급">S급</button>
   <button class="filter-btn grade-btn" data-grade="A급">A급</button>
   <button class="filter-btn grade-btn" data-grade="B급">B급</button>
-  <div class="divider"></div>
-  <button class="filter-btn grade-btn" data-grade="성공">성공</button>
-  <button class="filter-btn grade-btn" data-grade="불씨">불씨</button>
   <span class="count" id="count"></span>
-</div>
-<div class="product-filters">
-  <span class="filter-label">제품군</span>
-  <button class="filter-btn product-btn active" data-product="all">전체</button>
-  <button class="filter-btn product-btn" data-product="빙과">빙과</button>
-  <button class="filter-btn product-btn" data-product="제과">제과</button>
 </div>
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(총 광고비 100만원 이상)을 충족하는 광고가 없습니다.</div>'}
@@ -454,16 +468,14 @@ def build_html(ads_data):
   const cards = [...document.querySelectorAll('.card')];
   const countEl = document.getElementById('count');
   let activeGrade = 'all';
-  let activeProduct = 'all';
-  let activeMedia = 'image';
+  let activeMedia = 'all';
 
   function applyFilters() {{
     let v = 0;
     cards.forEach(c => {{
       const gradeOk = activeGrade === 'all' || c.dataset.grade === activeGrade;
-      const productOk = activeProduct === 'all' || c.dataset.product === activeProduct;
-      const mediaOk = c.dataset.media === activeMedia;
-      const show = gradeOk && productOk && mediaOk;
+      const mediaOk = activeMedia === 'all' || c.dataset.media === activeMedia;
+      const show = gradeOk && mediaOk;
       c.style.display = show ? '' : 'none';
       if (show) v++;
     }});
@@ -486,15 +498,6 @@ def build_html(ads_data):
       document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeGrade = btn.dataset.grade;
-      applyFilters();
-    }});
-  }});
-
-  document.querySelectorAll('.product-btn').forEach(btn => {{
-    btn.addEventListener('click', () => {{
-      document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activeProduct = btn.dataset.product;
       applyFilters();
     }});
   }});
@@ -537,14 +540,21 @@ def build_html(ads_data):
 </html>"""
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
-def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
-    """media_tag: 'F_I'/'F_V', media_type: 'image'/'video' → new_results 리스트 반환"""
-    ads = fetch_ads(month_tag, media_tag)
-    print(f"  → [{month_tag}] {media_tag} 광고 {len(ads)}개 발견")
+def collect_media(month_tag, date_start, date_stop, media_tag, media_type, category=None, extra_keyword=""):
+    """media_tag: 'F_I'/'F_V', media_type: 'image'/'video'
+    category: None(일반)/'쩜오건', extra_keyword: 광고명 추가 필터 → new_results 리스트 반환"""
+    ads = fetch_ads(month_tag, media_tag, extra_keyword)
+    label = category or media_tag
+    print(f"  → [{month_tag}] {label} 광고 {len(ads)}개 발견")
+
+    is_jjamo = (category == "쩜오건")
 
     raw = {}
     for ad in ads:
         ad_id, ad_name = ad["id"], ad["name"]
+        # 일반 영상 수집에서는 쩜오건 광고 제외 (전용 탭에서만 다룸)
+        if not is_jjamo and "쩜오건" in ad_name:
+            continue
         creative_id = ad.get("creative", {}).get("id", "")
         print(f"  처리 중: {ad_name[:50]}...")
 
@@ -555,14 +565,25 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
 
         # F_I + 릴스: 영상으로 가져오되 등급/필터는 이미지 기준
         is_reels = (media_tag == "F_I" and "릴스" in ad_name)
-        actual_media_type = "video" if is_reels else media_type  # 미디어 fetch용
-        grade_type = "image" if (media_type == "image" or is_reels) else "video"  # 등급/필터용
+        actual_media_type = "video" if (is_reels or media_type == "video") else media_type  # 미디어 fetch용
+
+        # 등급 타입(grade_type)과 유형 탭(category) 결정
+        if is_jjamo:
+            grade_type = "쩜오건"
+            cat = "쩜오건"
+        elif media_type == "image" or is_reels:
+            grade_type = "image"
+            cat = "image"
+        else:
+            grade_type = "video"
+            cat = "video"
 
         candidate = {
             "name":                ad_name,
             "creative_id":         creative_id,
             "media_type":          actual_media_type,
             "grade_type":          grade_type,
+            "category":            cat,
             "status":              ad.get("status", ""),
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
@@ -580,9 +601,9 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         if len(candidates) > 1:
             print(f"  중복 {len(candidates)}개 → 최고 성과 선택: {ad_name[:40]} (구매 {best['conversions']:.0f}건)")
 
-        # 2. 등급 판정 (릴스는 이미지 기준 적용)
+        # 2. 등급 판정 (릴스는 이미지 기준, 쩜오건은 쩜오건 기준 적용)
         actual_type = best["media_type"]
-        grade_type = best.pop("grade_type", actual_type)
+        grade_type = best.get("grade_type", actual_type)
         grade = get_grade(best["total_spend"], grade_type)
         if grade is None:
             continue
@@ -608,7 +629,7 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
         best["grade"] = grade
         new_results.append(best)
 
-    print(f"  → [{month_tag}] {media_tag} 고효율 광고 {len(new_results)}개")
+    print(f"  → [{month_tag}] {label} 고효율 광고 {len(new_results)}개")
     return new_results
 
 def main():
@@ -623,17 +644,22 @@ def main():
     print(f"  → 기존 아카이브 {len(existing)}개")
 
     merged = existing
-    all_modes = [("F_I", "image"), ("F_V", "video")]
+    # (media_tag, media_type, category, extra_keyword)
+    all_modes = [
+        ("F_I", "image", None, ""),
+        ("F_V", "video", None, ""),
+        ("F_V", "video", "쩜오건", "쩜오건"),  # 쩜오건 전용 (50만원↑)
+    ]
     if MEDIA_MODE == "image":
-        modes = [("F_I", "image")]
+        modes = [("F_I", "image", None, "")]
     elif MEDIA_MODE == "video":
-        modes = [("F_V", "video")]
+        modes = [("F_V", "video", None, ""), ("F_V", "video", "쩜오건", "쩜오건")]
     else:
         modes = all_modes
-    print(f"  수집 유형: {MEDIA_MODE} → {[m[0] for m in modes]}")
-    for media_tag, media_type in modes:
-        print(f"\n🎯 {media_tag} ({media_type}) 수집")
-        results = collect_media(MONTH_TAG, date_start, date_stop, media_tag, media_type)
+    print(f"  수집 유형: {MEDIA_MODE} → {[ (m[2] or m[0]) for m in modes]}")
+    for media_tag, media_type, category, extra_keyword in modes:
+        print(f"\n🎯 {category or media_tag} ({media_type}) 수집")
+        results = collect_media(MONTH_TAG, date_start, date_stop, media_tag, media_type, category, extra_keyword)
         merged = merge_archive(merged, results, MONTH_TAG)
 
     save_archive(merged)
