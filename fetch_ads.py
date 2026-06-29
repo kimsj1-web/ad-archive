@@ -73,7 +73,7 @@ def fetch_ads(month_tag, media_tag):
     """media_tag: 'F_I'(이미지) 또는 'F_V'(영상)"""
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/ads"
     params = {
-        "fields": "id,name,status,creative{id}",
+        "fields": "id,name,effective_status,creative{id}",
         "filtering": json.dumps([
             {"field": "name", "operator": "CONTAIN", "value": media_tag},
             {"field": "name", "operator": "CONTAIN", "value": month_tag},
@@ -543,7 +543,7 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
             "creative_id":         creative_id,
             "media_type":          actual_media_type,
             "grade_type":          grade_type,
-            "status":              ad.get("status", ""),
+            "status":              ad.get("effective_status", ""),
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
             "active_days":         metrics["active_days"],
