@@ -196,7 +196,7 @@ def safe_filename(ad_name, suffix, ext):
 def fetch_insights(ad_id, date_start, date_stop):
     url = f"{BASE_URL}/{ad_id}/insights"
     params = {
-        "fields": "spend,cpc,actions,cost_per_action_type,clicks",
+        "fields": "spend,cpc,actions,cost_per_action_type,clicks,inline_link_clicks",
         "time_range": json.dumps({"since": date_start, "until": date_stop}),
         "time_increment": 1,   # 날짜별로 분리해서 받기
     }
@@ -215,7 +215,8 @@ def fetch_insights(ad_id, date_start, date_stop):
         daily_spend = total_spend / active_days
 
         # CPC, clicks, 전환은 전체 기간 합산
-        total_clicks = sum(float(r.get("clicks", 0)) for r in rows)
+        total_clicks = sum(float(r.get("clicks", 0)) for r in rows)          # 전체 클릭 (CPC용)
+        total_link_clicks = sum(float(r.get("inline_link_clicks", 0)) for r in rows)  # 링크 클릭 (전환률용)
         total_cpc    = total_spend / total_clicks if total_clicks else 0
 
         # 전환 수: purchase 액션만 집계
@@ -228,13 +229,16 @@ def fetch_insights(ad_id, date_start, date_stop):
         # 전환당 비용
         cost_per_conv = total_spend / conversions if conversions else 0
 
-        # 전환률
-        conversion_rate = (conversions / total_clicks * 100) if total_clicks else 0
+        # 전환률 = 구매 ÷ 링크 클릭 (메타 '전환율' 기준)
+        conversion_rate = (conversions / total_link_clicks * 100) if total_link_clicks else 0
 
         return {
             "daily_spend":        daily_spend,
             "active_days":        active_days,
+            "active_dates":       [r.get("date_start", "") for r in active_rows],  # 집행 날짜(합집합용)
             "total_spend":        total_spend,
+            "total_clicks":       total_clicks,        # 전체 클릭(CPC용, 합산용)
+            "total_link_clicks":  total_link_clicks,   # 링크 클릭(전환률용, 합산용)
             "cpc":                total_cpc,
             "conversions":        conversions,
             "cost_per_conversion": cost_per_conv,
@@ -611,33 +615,53 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
             "category":            cat,
             "status":              ad.get("effective_status", ""),
             "total_spend":         metrics["total_spend"],
-            "daily_spend":         metrics["daily_spend"],
-            "active_days":         metrics["active_days"],
-            "cpc":                 metrics["cpc"],
+            "active_dates":        metrics["active_dates"],
+            "total_clicks":        metrics["total_clicks"],
+            "total_link_clicks":   metrics["total_link_clicks"],
             "conversions":         metrics["conversions"],
-            "cost_per_conversion": metrics["cost_per_conversion"],
-            "conversion_rate":     metrics["conversion_rate"],
         }
         raw.setdefault(ad_name, []).append(candidate)
 
     new_results = []
     for ad_name, candidates in raw.items():
-        best = max(candidates, key=lambda x: x["conversions"])
-        if len(candidates) > 1:
-            print(f"  중복 {len(candidates)}개 → 최고 성과 선택: {ad_name[:40]} (구매 {best['conversions']:.0f}건)")
+        # ── 같은 이름의 광고는 성과를 '합산'해서 1개 카드로 ──
+        total_spend       = sum(c["total_spend"] for c in candidates)
+        conversions       = sum(c["conversions"] for c in candidates)
+        total_clicks      = sum(c["total_clicks"] for c in candidates)
+        total_link_clicks = sum(c["total_link_clicks"] for c in candidates)
 
-        # 2. 등급 판정 (릴스는 이미지 기준, 쩜오건은 쩜오건 기준 적용)
-        actual_type = best["media_type"]
-        grade_type = best.get("grade_type", actual_type)
-        grade = get_grade(best["total_spend"], grade_type)
+        # 집행일수: 날짜 합집합 (같은 날 병렬 집행해도 중복 카운트 안 함)
+        active_date_set = set()
+        for c in candidates:
+            active_date_set.update(d for d in c["active_dates"] if d)
+        active_days = len(active_date_set)
+
+        # 파생 지표 재계산
+        daily_spend     = total_spend / active_days if active_days else 0
+        cpc             = total_spend / total_clicks if total_clicks else 0
+        cost_per_conv   = total_spend / conversions if conversions else 0
+        conversion_rate = (conversions / total_link_clicks * 100) if total_link_clicks else 0
+
+        # 게재 상태: 하나라도 ACTIVE면 게재중
+        status = "ACTIVE" if any(c["status"] == "ACTIVE" for c in candidates) else candidates[0]["status"]
+
+        base = candidates[0]
+        actual_type = base["media_type"]
+        grade_type  = base.get("grade_type", actual_type)
+
+        # 등급 판정 (합산된 총 광고비 기준)
+        grade = get_grade(total_spend, grade_type)
         if grade is None:
             continue
 
-        # 3. 등급 통과한 것만 이미지/영상 다운로드
+        if len(candidates) > 1:
+            print(f"  중복 {len(candidates)}개 합산: {ad_name[:40]} (총 {total_spend:,.0f}원 / 구매 {conversions:.0f}건 / {active_days}일)")
+
+        # 미디어 다운로드 (같은 이름=같은 소재, 구매 최다 광고의 크리에이티브 사용)
         is_reels_type = (actual_type == "video" and media_tag == "F_I")
         type_label = "릴스(영상/이미지등급)" if is_reels_type else actual_type
-        print(f"    → {grade} | 총 {best['total_spend']:,.0f}원 / 구매 {best['conversions']:.0f}건 ({best['active_days']}일 집행) [{type_label}]")
-        creative_id = best.pop("creative_id")
+        print(f"    → {grade} | 총 {total_spend:,.0f}원 / 구매 {conversions:.0f}건 ({active_days}일 집행) [{type_label}]")
+        creative_id = max(candidates, key=lambda x: x["conversions"])["creative_id"]
         media = fetch_creative_media(creative_id, actual_type)
 
         img_filename = safe_filename(ad_name, "thumb", "jpg")
@@ -648,11 +672,24 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
             vid_filename = safe_filename(ad_name, "video", "mp4")
             local_video = download_media(media["video_url"], vid_filename)
 
-        best["image_url"] = local_img if local_img else media["image_url"]
-        best["video_url"] = local_video if local_video else media["video_url"]
-        best["video_permalink"] = media.get("video_permalink", "")
-        best["grade"] = grade
-        new_results.append(best)
+        new_results.append({
+            "name":                ad_name,
+            "media_type":          actual_type,
+            "grade_type":          grade_type,
+            "category":            base["category"],
+            "status":              status,
+            "total_spend":         total_spend,
+            "daily_spend":         daily_spend,
+            "active_days":         active_days,
+            "cpc":                 cpc,
+            "conversions":         conversions,
+            "cost_per_conversion": cost_per_conv,
+            "conversion_rate":     conversion_rate,
+            "image_url":           local_img if local_img else media["image_url"],
+            "video_url":           local_video if local_video else media["video_url"],
+            "video_permalink":     media.get("video_permalink", ""),
+            "grade":               grade,
+        })
 
     print(f"  → [{month_tag}] {label} 고효율 광고 {len(new_results)}개")
     return new_results
