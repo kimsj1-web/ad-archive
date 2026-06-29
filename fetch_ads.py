@@ -88,7 +88,7 @@ def fetch_ads(month_tag, media_tag, extra_keyword=""):
     if extra_keyword:
         filtering.append({"field": "name", "operator": "CONTAIN", "value": extra_keyword})
     params = {
-        "fields": "id,name,status,creative{id}",
+        "fields": "id,name,effective_status,creative{id}",
         "filtering": json.dumps(filtering),
         "limit": 500,
     }
@@ -255,54 +255,33 @@ def save_archive(archive):
     with open(ARCHIVE_FILE, "w", encoding="utf-8") as f:
         json.dump(archive, f, ensure_ascii=False, indent=2)
 
-# ── 누적 병합 (총 광고비 합산 기준) ──────────────────────────────────────────
+# ── 병합 (같은 광고명은 최신 수집값으로 교체 = upsert) ───────────────────────
 def merge_archive(existing, new_results, period_label):
+    """같은 광고명을 다시 수집하면 합산하지 않고 '최신 값으로 교체'한다.
+    - 같은 달을 다시 돌려도 금액/전환/집행일수가 2배가 되지 않음 (idempotent)
+    - 이번에 수집되지 않은 기존 광고는 그대로 보존
+    (광고명에 [26.0X] 월이 박혀 있어 한 광고는 한 달에만 잡히므로 누적합산이 불필요)"""
     grade_order = {"SS급": 0, "S급": 1, "A급": 2, "B급": 3}
     existing_map = {ad["name"]: ad for ad in existing}
 
     for new_ad in new_results:
         name = new_ad["name"]
-        new_ad["periods"] = [period_label]
+        old = existing_map.get(name)
 
-        if name in existing_map:
-            rec = existing_map[name]
+        # 기간 태그: 기존 + 이번 실행 합집합 (중복 없이 보존)
+        periods = list(old.get("periods", [])) if old else []
+        if period_label not in periods:
+            periods.append(period_label)
+        new_ad["periods"] = periods
 
-            # 기간 태그 누적
-            if period_label not in rec.get("periods", []):
-                rec.setdefault("periods", []).append(period_label)
+        # 미디어 URL: 이번에 비어 있으면 기존 값 유지 (재다운로드 실패 대비)
+        if old:
+            for k in ("image_url", "video_url", "video_permalink"):
+                if not new_ad.get(k) and old.get(k):
+                    new_ad[k] = old[k]
 
-            # 총 광고비 합산
-            rec["total_spend"] = rec.get("total_spend", 0) + new_ad.get("total_spend", 0)
-
-            # 집행일수 합산
-            rec["active_days"] = rec.get("active_days", 0) + new_ad.get("active_days", 0)
-
-            # 전환 수 합산
-            rec["conversions"] = rec.get("conversions", 0) + new_ad.get("conversions", 0)
-
-            # 일 평균 광고비, 전환당 비용 재계산
-            rec["daily_spend"] = rec["total_spend"] / rec["active_days"] if rec["active_days"] else 0
-            rec["cost_per_conversion"] = rec["total_spend"] / rec["conversions"] if rec["conversions"] else 0
-
-            # 합산된 총 광고비로 등급 재판정 (grade_type 기준)
-            regrade_type = rec.get("grade_type", rec.get("media_type", "image"))
-            new_grade = get_grade(rec["total_spend"], regrade_type)
-            if new_grade:
-                rec["grade"] = new_grade
-
-            # 게재 상태: 어느 하나라도 ACTIVE면 게재중
-            if new_ad.get("status") == "ACTIVE":
-                rec["status"] = "ACTIVE"
-
-            # 이미지/영상 URL 없으면 업데이트
-            if not rec.get("image_url") and new_ad.get("image_url"):
-                rec["image_url"] = new_ad["image_url"]
-            if not rec.get("video_url") and new_ad.get("video_url"):
-                rec["video_url"] = new_ad["video_url"]
-            if not rec.get("video_permalink") and new_ad.get("video_permalink"):
-                rec["video_permalink"] = new_ad["video_permalink"]
-        else:
-            existing_map[name] = new_ad
+        # 최신 수집값으로 통째 교체 (등급/금액/전환/집행일수/게재상태 모두 갱신)
+        existing_map[name] = new_ad
 
     merged = list(existing_map.values())
     merged.sort(key=lambda x: (grade_order.get(x.get("grade", "B급"), 99), -x.get("total_spend", 0)))
@@ -448,13 +427,15 @@ def build_html(ads_data):
   <button class="filter-btn media-btn" data-media="image">이미지</button>
   <button class="filter-btn media-btn" data-media="video">영상</button>
   <button class="filter-btn media-btn" data-media="쩜오건">쩜오건</button>
-  <div class="divider"></div>
-  <span class="filter-label">등급</span>
+  <div class="divider" id="gradeDivider"></div>
+  <span class="filter-label" id="gradeLabel">등급</span>
   <button class="filter-btn grade-btn active" data-grade="all">전체</button>
   <button class="filter-btn grade-btn" data-grade="SS급">SS급</button>
   <button class="filter-btn grade-btn" data-grade="S급">S급</button>
   <button class="filter-btn grade-btn" data-grade="A급">A급</button>
   <button class="filter-btn grade-btn" data-grade="B급">B급</button>
+  <button class="filter-btn grade-btn" data-grade="성공">성공</button>
+  <button class="filter-btn grade-btn" data-grade="불씨">불씨</button>
   <span class="count" id="count"></span>
 </div>
 <div class="gallery" id="gallery">
@@ -467,8 +448,33 @@ def build_html(ads_data):
 <script>
   const cards = [...document.querySelectorAll('.card')];
   const countEl = document.getElementById('count');
+  const gradeLabel = document.getElementById('gradeLabel');
+  const gradeDivider = document.getElementById('gradeDivider');
   let activeGrade = 'all';
   let activeMedia = 'all';
+
+  // 유형별로 노출할 등급 버튼
+  const gradeGroups = {{
+    all:    ['SS급','S급','A급','B급','성공','불씨'],
+    image:  ['SS급','S급','A급','B급'],
+    video:  ['성공','불씨'],
+    '쩜오건': []
+  }};
+
+  function updateGradeButtons() {{
+    const allowed = gradeGroups[activeMedia] || [];
+    const showGroup = allowed.length > 0;   // 쩜오건이면 등급 필터 자체를 숨김
+    gradeLabel.style.display   = showGroup ? '' : 'none';
+    gradeDivider.style.display = showGroup ? '' : 'none';
+    document.querySelectorAll('.grade-btn').forEach(b => {{
+      const g = b.dataset.grade;
+      const visible = showGroup && (g === 'all' || allowed.includes(g));
+      b.style.display = visible ? '' : 'none';
+    }});
+    // 탭을 바꾸면 등급 선택은 '전체'로 초기화
+    activeGrade = 'all';
+    document.querySelectorAll('.grade-btn').forEach(b => b.classList.toggle('active', b.dataset.grade === 'all'));
+  }}
 
   function applyFilters() {{
     let v = 0;
@@ -482,6 +488,7 @@ def build_html(ads_data):
     countEl.textContent = v + '개';
   }}
 
+  updateGradeButtons();
   applyFilters();
 
   document.querySelectorAll('.media-btn').forEach(btn => {{
@@ -489,6 +496,7 @@ def build_html(ads_data):
       document.querySelectorAll('.media-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeMedia = btn.dataset.media;
+      updateGradeButtons();
       applyFilters();
     }});
   }});
@@ -584,7 +592,7 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
             "media_type":          actual_media_type,
             "grade_type":          grade_type,
             "category":            cat,
-            "status":              ad.get("status", ""),
+            "status":              ad.get("effective_status", ""),
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
             "active_days":         metrics["active_days"],
