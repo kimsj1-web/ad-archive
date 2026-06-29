@@ -438,6 +438,12 @@ def build_html(ads_data):
   <button class="filter-btn grade-btn" data-grade="불씨">불씨</button>
   <span class="count" id="count"></span>
 </div>
+<div class="product-filters">
+  <span class="filter-label">제품군</span>
+  <button class="filter-btn product-btn active" data-product="all">전체</button>
+  <button class="filter-btn product-btn" data-product="빙과">빙과</button>
+  <button class="filter-btn product-btn" data-product="제과">제과</button>
+</div>
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(총 광고비 100만원 이상)을 충족하는 광고가 없습니다.</div>'}
 </div>
@@ -452,6 +458,7 @@ def build_html(ads_data):
   const gradeDivider = document.getElementById('gradeDivider');
   let activeGrade = 'all';
   let activeMedia = 'all';
+  let activeProduct = 'all';
 
   // 유형별로 노출할 등급 버튼
   const gradeGroups = {{
@@ -481,7 +488,8 @@ def build_html(ads_data):
     cards.forEach(c => {{
       const gradeOk = activeGrade === 'all' || c.dataset.grade === activeGrade;
       const mediaOk = activeMedia === 'all' || c.dataset.media === activeMedia;
-      const show = gradeOk && mediaOk;
+      const productOk = activeProduct === 'all' || c.dataset.product === activeProduct;
+      const show = gradeOk && mediaOk && productOk;
       c.style.display = show ? '' : 'none';
       if (show) v++;
     }});
@@ -506,6 +514,15 @@ def build_html(ads_data):
       document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       activeGrade = btn.dataset.grade;
+      applyFilters();
+    }});
+  }});
+
+  document.querySelectorAll('.product-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.product-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeProduct = btn.dataset.product;
       applyFilters();
     }});
   }});
