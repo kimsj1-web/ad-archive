@@ -73,7 +73,7 @@ def fetch_ads(month_tag, media_tag):
     """media_tag: 'F_I'(이미지) 또는 'F_V'(영상)"""
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/ads"
     params = {
-        "fields": "id,name,effective_status,creative{id}",
+        "fields": "id,name,creative{id}",
         "filtering": json.dumps([
             {"field": "name", "operator": "CONTAIN", "value": media_tag},
             {"field": "name", "operator": "CONTAIN", "value": month_tag},
@@ -278,9 +278,6 @@ def merge_archive(existing, new_results, period_label):
                 rec["grade"] = new_grade
 
             # 게재 상태: 어느 하나라도 ACTIVE면 게재중
-            # 게재 상태: 항상 최신 상태로 덮어씀
-            if new_ad.get("status"):
-                rec["status"] = new_ad["status"]
 
             # 이미지/영상 URL 없으면 업데이트
             if not rec.get("image_url") and new_ad.get("image_url"):
@@ -332,10 +329,6 @@ def build_html(ads_data):
 
         periods_tag = " ".join(f'<span class="period-tag">{p}</span>' for p in ad.get("periods", []))
         product = get_product(ad["name"])
-        status = ad.get("status", "")
-        is_active = status == "ACTIVE"
-        status_label = "게재중" if is_active else "게재완료"
-        status_color = "#34C759" if is_active else "#8A8A9A"
 
         cards_html += f"""
         <div class="card{' has-video' if is_video and video else (' has-permalink' if is_video and video_permalink else '')}" data-grade="{ad['grade']}" data-product="{product}" data-media="{ad.get('grade_type', media_type)}"{card_click_attr}>
@@ -353,10 +346,7 @@ def build_html(ads_data):
                     <div class="metric"><span class="label">전환 수</span><span class="value">{ad['conversions']:,.0f}</span></div>
                     <div class="metric"><span class="label">전환당 비용</span><span class="value">{ad['cost_per_conversion']:,.0f}원</span></div>
                     <div class="metric"><span class="label">전환률</span><span class="value">{ad['conversion_rate']:.2f}%</span></div>
-                    <div class="metric">
-                        <span class="label">집행일수</span>
-                        <span class="value">{int(ad.get('active_days', 0))}일 <span class="status-dot" style="background:{status_color}"></span><span class="status-txt" style="color:{status_color}">{status_label}</span></span>
-                    </div>
+                    <div class="metric"><span class="label">집행일수</span><span class="value">{int(ad.get('active_days', 0))}일</span></div>
                 </div>
                 <div class="periods">{periods_tag}</div>
             </div>
@@ -405,8 +395,6 @@ def build_html(ads_data):
   .metric {{ display:flex; flex-direction:column; gap:2px; }}
   .metric .label {{ font-size:10px; color:var(--muted); letter-spacing:0.5px; }}
   .metric .value {{ font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px; }}
-  .status-dot {{ width:6px; height:6px; border-radius:50%; display:inline-block; flex-shrink:0; }}
-  .status-txt {{ font-size:11px; font-weight:500; }}
   .periods {{ margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }}
   .period-tag {{ font-size:10px; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }}
   .empty {{ grid-column:1/-1; text-align:center; padding:80px 0; color:var(--muted); }}
@@ -543,7 +531,6 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type):
             "creative_id":         creative_id,
             "media_type":          actual_media_type,
             "grade_type":          grade_type,
-            "status":              ad.get("effective_status", ""),
             "total_spend":         metrics["total_spend"],
             "daily_spend":         metrics["daily_spend"],
             "active_days":         metrics["active_days"],
