@@ -278,8 +278,9 @@ def merge_archive(existing, new_results, period_label):
                 rec["grade"] = new_grade
 
             # 게재 상태: 어느 하나라도 ACTIVE면 게재중
-            if new_ad.get("status") == "ACTIVE":
-                rec["status"] = "ACTIVE"
+            # 게재 상태: 항상 최신 상태로 덮어씀
+            if new_ad.get("status"):
+                rec["status"] = new_ad["status"]
 
             # 이미지/영상 URL 없으면 업데이트
             if not rec.get("image_url") and new_ad.get("image_url"):
