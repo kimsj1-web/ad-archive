@@ -630,8 +630,7 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
         cost_per_conv   = total_spend / conversions if conversions else 0
         conversion_rate = (conversions / total_link_clicks * 100) if total_link_clicks else 0
 
-        # 게재 상태: 하나라도 ACTIVE면 게재중
-        status = "ACTIVE" if any(c["status"] == "ACTIVE" for c in candidates) else candidates[0]["status"]
+        # 게재 상태 제거됨
 
         base = candidates[0]
         actual_type = base["media_type"]
@@ -665,7 +664,6 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
             "media_type":          actual_type,
             "grade_type":          grade_type,
             "category":            base["category"],
-            "status":              status,
             "total_spend":         total_spend,
             "daily_spend":         daily_spend,
             "active_days":         active_days,
