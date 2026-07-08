@@ -262,15 +262,15 @@ def fetch_insights(ad_id, date_start, date_stop):
         return None
 
 # ── 일광고비(불씨) 수집 ───────────────────────────────────────────────────────
-def fetch_account_daily_insights(date_start, date_stop):
-    """계정 전체 광고의 '일자별' 인사이트를 한 번에 가져온다 (level=ad, 하루 단위).
-    delivery(집행)가 있었던 광고·날짜만 반환되므로 '이번주 집행중' 필터로 딱 맞음."""
+def fetch_account_active_ads(date_start, date_stop):
+    """최근 기간에 '지출이 있었던' 광고 목록만 가볍게 조회한다.
+    일자 분리(time_increment)와 actions 없이 집계만 받아서 서버 부하를 낮춘다.
+    → level=ad + time_increment=1 + actions 조합은 계정이 크면 500(내부오류)이 나므로 피함."""
     url = f"{BASE_URL}/{AD_ACCOUNT_ID}/insights"
     params = {
         "level": "ad",
-        "fields": "ad_id,ad_name,spend,clicks,inline_link_clicks,actions",
+        "fields": "ad_id,ad_name,spend",
         "time_range": json.dumps({"since": date_start, "until": date_stop}),
-        "time_increment": 1,
         "limit": 500,
     }
     rows = []
@@ -283,6 +283,20 @@ def fetch_account_daily_insights(date_start, date_stop):
         url, params = next_url, {}
     return rows
 
+def fetch_ad_daily_rows(ad_id, date_start, date_stop):
+    """단일 광고의 '일자별' 인사이트 rows 반환 (검증된 /{ad_id}/insights 경로)."""
+    url = f"{BASE_URL}/{ad_id}/insights"
+    params = {
+        "fields": "spend,clicks,inline_link_clicks,actions",
+        "time_range": json.dumps({"since": date_start, "until": date_stop}),
+        "time_increment": 1,
+    }
+    try:
+        return api_get(url, params).get("data", [])
+    except Exception as e:
+        print(f"    일자별 인사이트 실패 (ad {ad_id}): {e}")
+        return []
+
 def fetch_ad_creative_id(ad_id):
     try:
         data = api_get(f"{BASE_URL}/{ad_id}", {"fields": "creative{id}"})
@@ -293,48 +307,60 @@ def fetch_ad_creative_id(ad_id):
 
 def collect_daily_spikes(date_start, date_stop):
     """최근 7일 집행된 이미지·릴스 배너(F_I) 중
-    하루 최고 지출이 등급 기준(30만↑)에 걸리는 광고만 반환."""
+    하루 최고 지출이 등급 기준(30만↑)에 걸리는 광고만 반환.
+    2단계: ① 지출 있었던 광고 목록만 가볍게 조회 → ② F_I만 광고별 일자 조회."""
     print(f"🔥 일광고비 스캔: {date_start} ~ {date_stop} (F_I 이미지·릴스 / 최근 7일)")
-    rows = fetch_account_daily_insights(date_start, date_stop)
 
-    # 광고명 기준으로 묶기 (같은 이름이 여러 광고세트에 있으면 같은 날 지출을 합산)
-    groups = {}
-    for r in rows:
+    # ── 1) 지출 있었던 광고 목록 (가벼운 호출) ──
+    try:
+        active = fetch_account_active_ads(date_start, date_stop)
+    except Exception as e:
+        print(f"  ⚠️  광고 목록 조회 실패 → 일광고비 탭은 이번엔 건너뜀: {e}")
+        return []
+
+    # F_I 배너만, 지출>0. 같은 이름이 여러 광고에 있으면 ad_id들을 모아둠
+    name_to_ids = {}
+    for r in active:
         name = r.get("ad_name", "")
-        if "F_I" not in name:      # F_I 배너만 (이미지 + 릴스)
+        if "F_I" not in name:                 # F_I 배너만 (이미지 + 릴스)
             continue
-        g = groups.setdefault(name, {
-            "ad_id": r.get("ad_id", ""),
-            "date_spend": {}, "spend": 0.0, "clicks": 0.0, "link": 0.0, "purch": 0.0,
-        })
-        if not g["ad_id"]:
-            g["ad_id"] = r.get("ad_id", "")
-        d  = r.get("date_start", "")
-        sp = float(r.get("spend", 0))
-        g["date_spend"][d] = g["date_spend"].get(d, 0.0) + sp
-        g["spend"]  += sp
-        g["clicks"] += float(r.get("clicks", 0))
-        g["link"]   += float(r.get("inline_link_clicks", 0))
-        for a in r.get("actions", []):
-            if a.get("action_type") == "purchase":
-                g["purch"] += float(a.get("value", 0))
+        if float(r.get("spend", 0)) <= 0:      # 이번주 집행분만
+            continue
+        name_to_ids.setdefault(name, []).append(r.get("ad_id", ""))
 
+    print(f"  → F_I 집행 광고 {len(name_to_ids)}개 → 광고별 일자 조회")
+
+    # ── 2) 광고별 일자 조회 후 등급 판정 ──
     results = []
-    for name, g in groups.items():
-        if not g["date_spend"]:
+    for name, ad_ids in name_to_ids.items():
+        date_spend = {}
+        tot_spend = tot_clicks = tot_link = tot_purch = 0.0
+        for ad_id in ad_ids:
+            for d in fetch_ad_daily_rows(ad_id, date_start, date_stop):
+                dt = d.get("date_start", "")
+                sp = float(d.get("spend", 0))
+                date_spend[dt] = date_spend.get(dt, 0.0) + sp   # 같은 날 여러 광고면 합산
+                tot_spend  += sp
+                tot_clicks += float(d.get("clicks", 0))
+                tot_link   += float(d.get("inline_link_clicks", 0))
+                for a in d.get("actions", []):
+                    if a.get("action_type") == "purchase":
+                        tot_purch += float(a.get("value", 0))
+
+        if not date_spend:
             continue
-        peak_daily = max(g["date_spend"].values())
+        peak_daily = max(date_spend.values())
         grade = get_daily_grade(peak_daily)
-        if grade is None:          # 30만원 미만이면 불씨 아님
+        if grade is None:                      # 30만원 미만이면 불씨 아님
             continue
-        peak_date = max(g["date_spend"], key=g["date_spend"].get)
-        cpc = g["spend"] / g["clicks"] if g["clicks"] else 0
-        cvr = (g["purch"] / g["link"] * 100) if g["link"] else 0
+        peak_date = max(date_spend, key=date_spend.get)
+        cpc = tot_spend / tot_clicks if tot_clicks else 0
+        cvr = (tot_purch / tot_link * 100) if tot_link else 0
 
         print(f"  🔥 {grade} | {name[:45]} | 일최고 {peak_daily:,.0f}원 ({peak_date})")
 
         # 이미지 다운로드 (릴스는 썸네일을 영상 경로로 확보 — 영상 파일은 받지 않음)
-        creative_id = fetch_ad_creative_id(g["ad_id"])
+        creative_id = fetch_ad_creative_id(ad_ids[0])
         fetch_type = "video" if "릴스" in name else "image"
         media = fetch_creative_media(creative_id, fetch_type)
         img_filename = safe_filename(name, "daily", "jpg")
@@ -344,8 +370,8 @@ def collect_daily_spikes(date_start, date_stop):
             "name":             name,
             "peak_daily_spend": peak_daily,
             "peak_date":        peak_date,
-            "total_spend":      g["spend"],
-            "conversions":      g["purch"],
+            "total_spend":      tot_spend,
+            "conversions":      tot_purch,
             "cpc":              cpc,
             "cvr":              cvr,
             "grade":            grade,
