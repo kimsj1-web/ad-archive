@@ -49,6 +49,21 @@ def get_grade_color(grade):
         "쩜오건": "#00C4B4",
     }.get(grade, "#8E8E93")
 
+# ── 일광고비(불씨) 등급 기준 (하루 최고 지출 기준) ────────────────────────────
+def get_daily_grade(peak_daily_spend):
+    if peak_daily_spend >= 1_500_000:
+        return "SS"
+    elif peak_daily_spend >= 1_000_000:
+        return "S"
+    elif peak_daily_spend >= 500_000:
+        return "A"
+    elif peak_daily_spend >= 300_000:
+        return "B"
+    return None
+
+def get_daily_grade_color(grade):
+    return {"SS": "#BF5AF2", "S": "#FF4B4B", "A": "#FF9500", "B": "#34C759"}.get(grade, "#8E8E93")
+
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
 def api_get(url, params):
     params["access_token"] = ACCESS_TOKEN
@@ -246,6 +261,102 @@ def fetch_insights(ad_id, date_start, date_stop):
         print(f"    인사이트 조회 실패: {e}")
         return None
 
+# ── 일광고비(불씨) 수집 ───────────────────────────────────────────────────────
+def fetch_account_daily_insights(date_start, date_stop):
+    """계정 전체 광고의 '일자별' 인사이트를 한 번에 가져온다 (level=ad, 하루 단위).
+    delivery(집행)가 있었던 광고·날짜만 반환되므로 '이번주 집행중' 필터로 딱 맞음."""
+    url = f"{BASE_URL}/{AD_ACCOUNT_ID}/insights"
+    params = {
+        "level": "ad",
+        "fields": "ad_id,ad_name,spend,clicks,inline_link_clicks,actions",
+        "time_range": json.dumps({"since": date_start, "until": date_stop}),
+        "time_increment": 1,
+        "limit": 500,
+    }
+    rows = []
+    while True:
+        data = api_get(url, params)
+        rows.extend(data.get("data", []))
+        next_url = data.get("paging", {}).get("next")
+        if not next_url:
+            break
+        url, params = next_url, {}
+    return rows
+
+def fetch_ad_creative_id(ad_id):
+    try:
+        data = api_get(f"{BASE_URL}/{ad_id}", {"fields": "creative{id}"})
+        return data.get("creative", {}).get("id", "")
+    except Exception as e:
+        print(f"    크리에이티브 ID 조회 실패 (ad {ad_id}): {e}")
+        return ""
+
+def collect_daily_spikes(date_start, date_stop):
+    """최근 7일 집행된 이미지·릴스 배너(F_I) 중
+    하루 최고 지출이 등급 기준(30만↑)에 걸리는 광고만 반환."""
+    print(f"🔥 일광고비 스캔: {date_start} ~ {date_stop} (F_I 이미지·릴스 / 최근 7일)")
+    rows = fetch_account_daily_insights(date_start, date_stop)
+
+    # 광고명 기준으로 묶기 (같은 이름이 여러 광고세트에 있으면 같은 날 지출을 합산)
+    groups = {}
+    for r in rows:
+        name = r.get("ad_name", "")
+        if "F_I" not in name:      # F_I 배너만 (이미지 + 릴스)
+            continue
+        g = groups.setdefault(name, {
+            "ad_id": r.get("ad_id", ""),
+            "date_spend": {}, "spend": 0.0, "clicks": 0.0, "link": 0.0, "purch": 0.0,
+        })
+        if not g["ad_id"]:
+            g["ad_id"] = r.get("ad_id", "")
+        d  = r.get("date_start", "")
+        sp = float(r.get("spend", 0))
+        g["date_spend"][d] = g["date_spend"].get(d, 0.0) + sp
+        g["spend"]  += sp
+        g["clicks"] += float(r.get("clicks", 0))
+        g["link"]   += float(r.get("inline_link_clicks", 0))
+        for a in r.get("actions", []):
+            if a.get("action_type") == "purchase":
+                g["purch"] += float(a.get("value", 0))
+
+    results = []
+    for name, g in groups.items():
+        if not g["date_spend"]:
+            continue
+        peak_daily = max(g["date_spend"].values())
+        grade = get_daily_grade(peak_daily)
+        if grade is None:          # 30만원 미만이면 불씨 아님
+            continue
+        peak_date = max(g["date_spend"], key=g["date_spend"].get)
+        cpc = g["spend"] / g["clicks"] if g["clicks"] else 0
+        cvr = (g["purch"] / g["link"] * 100) if g["link"] else 0
+
+        print(f"  🔥 {grade} | {name[:45]} | 일최고 {peak_daily:,.0f}원 ({peak_date})")
+
+        # 이미지 다운로드 (릴스는 썸네일을 영상 경로로 확보 — 영상 파일은 받지 않음)
+        creative_id = fetch_ad_creative_id(g["ad_id"])
+        fetch_type = "video" if "릴스" in name else "image"
+        media = fetch_creative_media(creative_id, fetch_type)
+        img_filename = safe_filename(name, "daily", "jpg")
+        local_img = download_media(media["image_url"], img_filename)
+
+        results.append({
+            "name":             name,
+            "peak_daily_spend": peak_daily,
+            "peak_date":        peak_date,
+            "total_spend":      g["spend"],
+            "conversions":      g["purch"],
+            "cpc":              cpc,
+            "cvr":              cvr,
+            "grade":            grade,
+            "image_url":        local_img if local_img else media["image_url"],
+        })
+
+    # 일 최고 지출 큰 순으로 정렬
+    results.sort(key=lambda x: -x["peak_daily_spend"])
+    print(f"  → 이번주 불씨 {len(results)}개")
+    return results
+
 # ── 누적 아카이브 로드/저장 ───────────────────────────────────────────────────
 def load_archive():
     if os.path.exists(ARCHIVE_FILE):
@@ -297,7 +408,7 @@ def get_product(name):
         return "제과"
     return "기타"
 
-def build_html(ads_data):
+def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
     KST = timezone(timedelta(hours=9))
     updated = datetime.now(KST).strftime("%Y-%m-%d %H:%M (KST)")
     all_periods = sorted({p for ad in ads_data for p in ad.get("periods", [])})
@@ -358,6 +469,36 @@ def build_html(ads_data):
             </div>
         </div>"""
 
+    # ── 일광고비(불씨) 카드 ──
+    daily_ads = daily_ads or []
+    daily_cards_html = ""
+    for ad in daily_ads:
+        gcolor = get_daily_grade_color(ad["grade"])
+        img = ad.get("image_url", "")
+        if img:
+            img_tag = f'<img src="{img}" alt="광고 미디어" onerror="this.style.display=\'none\'">'
+        else:
+            img_tag = '<div class="no-img">미리보기 없음</div>'
+        product = get_product(ad["name"])
+        daily_cards_html += f"""
+        <div class="fire-card" data-grade="{ad['grade']}" data-product="{product}">
+            <div class="card-img">
+                {img_tag}
+                <span class="grade-badge" style="background:{gcolor}">{ad['grade']}</span>
+            </div>
+            <div class="card-body">
+                <p class="ad-name">{ad['name']}</p>
+                <div class="metrics">
+                    <div class="metric"><span class="label">일광고비 (최고)</span><span class="value peak">{ad['peak_daily_spend']:,.0f}원</span></div>
+                    <div class="metric"><span class="label">최고 지출일</span><span class="value">{ad.get('peak_date','')}</span></div>
+                    <div class="metric"><span class="label">지출금액 (7일)</span><span class="value">{ad['total_spend']:,.0f}원</span></div>
+                    <div class="metric"><span class="label">구매 수</span><span class="value">{ad['conversions']:,.0f}</span></div>
+                    <div class="metric"><span class="label">CPC</span><span class="value">{ad['cpc']:,.0f}원</span></div>
+                    <div class="metric"><span class="label">CVR</span><span class="value">{ad['cvr']:.2f}%</span></div>
+                </div>
+            </div>
+        </div>"""
+
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -403,6 +544,19 @@ def build_html(ads_data):
   .metric .value {{ font-size:13px; font-weight:600; display:flex; align-items:center; gap:4px; }}
   .periods {{ margin-top:10px; display:flex; flex-wrap:wrap; gap:4px; }}
   .period-tag {{ font-size:10px; color:var(--muted); border:1px solid var(--border); border-radius:4px; padding:1px 6px; }}
+  .tabs {{ display:flex; gap:4px; padding:16px 32px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }}
+  .tab-btn {{ padding:10px 20px; border:none; background:transparent; color:var(--muted); font-size:14px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; font-family:inherit; transition:all .15s; }}
+  .tab-btn:hover {{ color:var(--text); }}
+  .tab-btn.active {{ color:var(--text); border-bottom-color:var(--text); }}
+  .tab-panel {{ display:none; }}
+  .tab-panel.active {{ display:block; }}
+  .panel-pad {{ padding:60px 32px; }}
+  .section-head {{ padding:24px 32px 8px; display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }}
+  .section-title {{ font-size:18px; font-weight:700; letter-spacing:-0.3px; }}
+  .section-sub {{ font-size:12px; color:var(--muted); }}
+  .fire-card {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:transform .2s,box-shadow .2s; }}
+  .fire-card:hover {{ transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.4); }}
+  .value.peak {{ color:#FF6B00; }}
   .empty {{ grid-column:1/-1; text-align:center; padding:80px 0; color:var(--muted); }}
 </style>
 </head>
@@ -414,6 +568,42 @@ def build_html(ads_data):
   </div>
   <span class="updated">마지막 업데이트: {updated}</span>
 </header>
+<div class="tabs">
+  <button class="tab-btn" data-tab="rankPanel">순위</button>
+  <button class="tab-btn active" data-tab="dailyPanel">일광고비</button>
+  <button class="tab-btn" data-tab="archivePanel">고효율 아카이브</button>
+</div>
+
+<section class="tab-panel" id="rankPanel">
+  <div class="panel-pad"><div class="empty">순위 탭은 준비 중입니다. 기준이 정해지면 추가할게요.</div></div>
+</section>
+
+<section class="tab-panel active" id="dailyPanel">
+  <div class="section-head">
+    <h2 class="section-title">🔥 이번주 불씨</h2>
+    <span class="section-sub">최근 7일 · {daily_start} ~ {daily_stop} · 이미지·릴스 배너 · 하루 최고 지출 기준</span>
+  </div>
+  <div class="product-filters">
+    <span class="filter-label">제품군</span>
+    <button class="filter-btn dproduct-btn active" data-product="all">전체</button>
+    <button class="filter-btn dproduct-btn" data-product="빙과">빙과</button>
+    <button class="filter-btn dproduct-btn" data-product="제과">제과</button>
+    <div class="divider"></div>
+    <span class="filter-label">등급</span>
+    <button class="filter-btn dgrade-btn active" data-grade="all">전체</button>
+    <button class="filter-btn dgrade-btn" data-grade="SS">SS</button>
+    <button class="filter-btn dgrade-btn" data-grade="S">S</button>
+    <button class="filter-btn dgrade-btn" data-grade="A">A</button>
+    <button class="filter-btn dgrade-btn" data-grade="B">B</button>
+    <span class="count" id="dailyCount"></span>
+  </div>
+  <div class="gallery" id="dailyGallery">
+    {daily_cards_html}
+  </div>
+  <div class="empty" id="dailyEmpty" style="display:none;">불씨 발굴중...</div>
+</section>
+
+<section class="tab-panel" id="archivePanel">
 <div class="controls">
   <span class="filter-label">유형</span>
   <button class="filter-btn media-btn active" data-media="all">전체</button>
@@ -444,8 +634,9 @@ def build_html(ads_data):
   <button class="modal-close" id="modalClose">&times;</button>
   <video id="modalVideo" controls></video>
 </div>
+</section>
 <script>
-  const cards = [...document.querySelectorAll('.card')];
+  const cards = [...document.querySelectorAll('#archivePanel .card')];
   const countEl = document.getElementById('count');
   const gradeLabel = document.getElementById('gradeLabel');
   const gradeDivider = document.getElementById('gradeDivider');
@@ -526,7 +717,7 @@ def build_html(ads_data):
   const modalClose = document.getElementById('modalClose');
 
   // 저장된 영상 → 모달 재생
-  document.querySelectorAll('.card.has-video').forEach(card => {{
+  document.querySelectorAll('#archivePanel .card.has-video').forEach(card => {{
     card.addEventListener('click', () => {{
       const src = card.dataset.video;
       if (!src) return;
@@ -537,7 +728,7 @@ def build_html(ads_data):
   }});
 
   // 다운로드 불가 영상 → 메타 페이지로 이동
-  document.querySelectorAll('.card.has-permalink').forEach(card => {{
+  document.querySelectorAll('#archivePanel .card.has-permalink').forEach(card => {{
     card.addEventListener('click', () => {{
       const url = card.dataset.permalink;
       if (!url) return;
@@ -553,6 +744,52 @@ def build_html(ads_data):
   modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', e => {{ if (e.target === modal) closeModal(); }});
   document.addEventListener('keydown', e => {{ if (e.key === 'Escape') closeModal(); }});
+
+  // ── 탭 전환 ──
+  document.querySelectorAll('.tab-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    }});
+  }});
+
+  // ── 일광고비(불씨) 필터 ──
+  const fireCards  = [...document.querySelectorAll('#dailyPanel .fire-card')];
+  const dailyCount = document.getElementById('dailyCount');
+  const dailyEmpty = document.getElementById('dailyEmpty');
+  let dProduct = 'all';
+  let dGrade = 'all';
+  function applyDaily() {{
+    let v = 0;
+    fireCards.forEach(c => {{
+      const pOk = dProduct === 'all' || c.dataset.product === dProduct;
+      const gOk = dGrade === 'all' || c.dataset.grade === dGrade;
+      const show = pOk && gOk;
+      c.style.display = show ? '' : 'none';
+      if (show) v++;
+    }});
+    dailyCount.textContent = v + '개';
+    dailyEmpty.style.display = v === 0 ? '' : 'none';
+  }}
+  document.querySelectorAll('.dproduct-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.dproduct-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dProduct = btn.dataset.product;
+      applyDaily();
+    }});
+  }});
+  document.querySelectorAll('.dgrade-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.dgrade-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dGrade = btn.dataset.grade;
+      applyDaily();
+    }});
+  }});
+  applyDaily();
 </script>
 </body>
 </html>"""
@@ -630,8 +867,6 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
         cost_per_conv   = total_spend / conversions if conversions else 0
         conversion_rate = (conversions / total_link_clicks * 100) if total_link_clicks else 0
 
-        # 게재 상태 제거됨
-
         base = candidates[0]
         actual_type = base["media_type"]
         grade_type  = base.get("grade_type", actual_type)
@@ -681,40 +916,47 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
     return new_results
 
 def main():
-    if not MONTH_TAG:
-        print("❌ MONTH_TAG가 비어 있습니다. 예: 26.05")
-        return
-
-    date_start, date_stop = get_time_range()
-    print(f"📡 [{MONTH_TAG}] 광고 수집 중... (성과 기간: {date_start} ~ {date_stop})")
-
     existing = load_archive()
-    print(f"  → 기존 아카이브 {len(existing)}개")
-
+    print(f"기존 아카이브 {len(existing)}개")
     merged = existing
-    # (media_tag, media_type, category, extra_keyword)
-    all_modes = [
-        ("F_I", "image", None, ""),
-        ("F_V", "video", None, ""),
-        ("F_V", "video", "쩜오건", "쩜오건"),  # 쩜오건 전용 (50만원↑)
-    ]
-    if MEDIA_MODE == "image":
-        modes = [("F_I", "image", None, "")]
-    elif MEDIA_MODE == "video":
-        modes = [("F_V", "video", None, ""), ("F_V", "video", "쩜오건", "쩜오건")]
+
+    # ── 1) 월 태그가 있을 때만 고효율 아카이브 수집/병합 ──
+    if MONTH_TAG:
+        date_start, date_stop = get_time_range()
+        print(f"📡 [{MONTH_TAG}] 아카이브 수집 중... (성과 기간: {date_start} ~ {date_stop})")
+
+        # (media_tag, media_type, category, extra_keyword)
+        all_modes = [
+            ("F_I", "image", None, ""),
+            ("F_V", "video", None, ""),
+            ("F_V", "video", "쩜오건", "쩜오건"),  # 쩜오건 전용 (50만원↑)
+        ]
+        if MEDIA_MODE == "image":
+            modes = [("F_I", "image", None, "")]
+        elif MEDIA_MODE == "video":
+            modes = [("F_V", "video", None, ""), ("F_V", "video", "쩜오건", "쩜오건")]
+        else:
+            modes = all_modes
+        print(f"  수집 유형: {MEDIA_MODE} → {[ (m[2] or m[0]) for m in modes]}")
+        for media_tag, media_type, category, extra_keyword in modes:
+            print(f"\n🎯 {category or media_tag} ({media_type}) 수집")
+            results = collect_media(MONTH_TAG, date_start, date_stop, media_tag, media_type, category, extra_keyword)
+            merged = merge_archive(merged, results, MONTH_TAG)
+
+        save_archive(merged)
+        print(f"\n  → 병합 후 총 {len(merged)}개")
     else:
-        modes = all_modes
-    print(f"  수집 유형: {MEDIA_MODE} → {[ (m[2] or m[0]) for m in modes]}")
-    for media_tag, media_type, category, extra_keyword in modes:
-        print(f"\n🎯 {category or media_tag} ({media_type}) 수집")
-        results = collect_media(MONTH_TAG, date_start, date_stop, media_tag, media_type, category, extra_keyword)
-        merged = merge_archive(merged, results, MONTH_TAG)
+        print("ℹ️  MONTH_TAG 없음 → 아카이브는 기존 유지, 일광고비 탭만 갱신")
 
-    save_archive(merged)
-    print(f"\n  → 병합 후 총 {len(merged)}개")
+    # ── 2) 일광고비(이번주 불씨): 월 태그와 무관하게 항상 최근 7일 기준 새로 계산 ──
+    today = datetime.today()
+    d_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
+    d_stop  = today.strftime("%Y-%m-%d")
+    daily_ads = collect_daily_spikes(d_start, d_stop)
 
+    # ── 3) HTML 생성 ──
     with open("index.html", "w", encoding="utf-8") as f:
-        f.write(build_html(merged))
+        f.write(build_html(merged, daily_ads, d_start, d_stop))
     print("✅ 완료")
 
 if __name__ == "__main__":
