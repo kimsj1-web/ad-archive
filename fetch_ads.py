@@ -1290,6 +1290,27 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
     print(f"  → [{month_tag}] {label} 고효율 광고 {len(new_results)}개")
     return new_results
 
+def expand_month_tags(spec):
+    """월 태그 입력을 월 목록으로 변환.
+    - "26.06"        → ["26.06"]
+    - "26.01~26.05"  → ["26.05","26.04","26.03","26.02","26.01"]  (최신 달부터)
+    - "-" 구분자도 허용 ("26.01-26.05")"""
+    spec = (spec or "").strip()
+    if not spec:
+        return []
+    sep = "~" if "~" in spec else ("-" if "-" in spec else None)
+    if sep is None:
+        return [spec]
+    a, b = [s.strip() for s in spec.split(sep, 1)]
+    def to_n(t):
+        yy, mm = t.split(".")
+        return int("20" + yy) * 12 + (int(mm) - 1)
+    def to_tag(n):
+        y, m = divmod(n, 12)
+        return f"{y % 100:02d}.{m + 1:02d}"
+    lo, hi = sorted([to_n(a), to_n(b)])
+    return list(reversed([to_tag(n) for n in range(lo, hi + 1)]))  # 최신 달부터
+
 def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, date_stop=None):
     """지정한 월 태그의 고효율 아카이브를 수집해 병합(교체) 후 반환."""
     if not (date_start and date_stop):
@@ -1329,12 +1350,21 @@ def main():
     # ── 1) 고효율 아카이브 수집 ──
     try:
         if MONTH_TAG:
-            # (수동) 지정한 월만 수집
-            date_start, date_stop = get_time_range()
-            print(f"수집 유형: {MEDIA_MODE}")
-            merged = run_archive_for_month(merged, MONTH_TAG, MEDIA_MODE, date_start, date_stop)
-            save_archive(merged)
-            print(f"  → 병합 후 총 {len(merged)}개")
+            # (수동) 지정한 월/범위 수집 — 범위면 최신 달부터 한 달씩
+            tags = expand_month_tags(MONTH_TAG)
+            print(f"수집 유형: {MEDIA_MODE} | 대상 월(최신순): {', '.join(tags)}")
+            if len(tags) == 1 and DATE_START and DATE_STOP:
+                # 단일 월 + 직접 지정 기간
+                merged = run_archive_for_month(merged, tags[0], MEDIA_MODE, DATE_START, DATE_STOP)
+                save_archive(merged)
+            else:
+                for i, tag in enumerate(tags):
+                    merged = run_archive_for_month(merged, tag, MEDIA_MODE)
+                    save_archive(merged)   # 각 달 끝날 때마다 저장 (중간 중단돼도 여기까지 보존)
+                    print(f"  → [{tag}] 저장 완료 (누적 {len(merged)}개)")
+                    if i < len(tags) - 1:
+                        time.sleep(30)     # 달 사이 텀 (레이트 리밋 완화)
+            print(f"  → 최종 총 {len(merged)}개")
         elif auto_archive:
             # (매일 자동) 최근 3개월(지지난 달·지난 달·이번 달)
             today = datetime.today()
