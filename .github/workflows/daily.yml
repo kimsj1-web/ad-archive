@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       month_tag:
-        description: "조회할 월 태그 (예: 26.05) — 비우면 일광고비·순위 탭만 갱신"
+        description: "월 태그 (예: 26.05) 또는 범위 (예: 26.01~26.05, 최신 달부터 자동 진행) — 비우면 일광고비·순위 탭만 갱신"
         required: false
         default: ""
       media_mode:
