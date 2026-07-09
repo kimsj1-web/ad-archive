@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import requests
 from datetime import datetime, timedelta, timezone
 
@@ -65,15 +66,53 @@ def get_daily_grade_color(grade):
     return {"SS": "#BF5AF2", "S": "#FF4B4B", "A": "#FF9500", "B": "#34C759"}.get(grade, "#8E8E93")
 
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
-def api_get(url, params):
+RATE_LIMIT_CODES    = {4, 17, 32, 613}          # 앱/유저/페이지 레이트 리밋
+RATE_LIMIT_SUBCODES = {2446079, 1487742, 1015}  # "User request limit reached" 등
+
+def api_get(url, params, _retries=5):
+    """메타 Graph API GET. 레이트 리밋(code 17 등)·일시 오류는 잠시 쉬었다가 자동 재시도."""
     params["access_token"] = ACCESS_TOKEN
-    resp = requests.get(url, params=params)
-    try:
+    delay_rate = 60   # 레이트 리밋 대기(초), 재시도마다 증가
+    delay_tmp  = 5    # 일시 오류 대기(초)
+    resp = None
+    for attempt in range(_retries + 1):
+        try:
+            resp = requests.get(url, params=params, timeout=60)
+        except requests.exceptions.RequestException as e:
+            if attempt < _retries:
+                print(f"  ⏳ 네트워크 오류 → {delay_tmp}s 후 재시도 ({attempt+1}/{_retries}): {e}")
+                time.sleep(delay_tmp); delay_tmp = min(delay_tmp * 2, 60); continue
+            raise
+        if resp.status_code == 200:
+            return resp.json()
+
+        err = {}
+        try:
+            err = resp.json().get("error", {})
+        except Exception:
+            pass
+        code, subcode = err.get("code"), err.get("error_subcode")
+        rate_limited = (code in RATE_LIMIT_CODES) or (subcode in RATE_LIMIT_SUBCODES)
+        transient    = err.get("is_transient", False) or resp.status_code in (500, 502, 503, 504)
+
+        if (rate_limited or transient) and attempt < _retries:
+            wait = delay_rate if rate_limited else delay_tmp
+            kind = "레이트 리밋" if rate_limited else "일시 오류"
+            print(f"  ⏳ {kind}(code {code}) → {wait}s 대기 후 재시도 ({attempt+1}/{_retries})")
+            time.sleep(wait)
+            if rate_limited:
+                delay_rate = min(delay_rate + 60, 300)
+            else:
+                delay_tmp = min(delay_tmp * 2, 60)
+            continue
+
+        print(f"  ⚠️  API 오류: {resp.status_code} | 응답: {resp.text[:300]}")
         resp.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        print(f"  ⚠️  API 오류: {e} | 응답: {resp.text[:300]}")
-        raise
-    return resp.json()
+        return resp.json()
+
+    # 재시도 모두 소진
+    print(f"  ⚠️  재시도 소진 → 마지막 응답: {resp.text[:300] if resp is not None else 'N/A'}")
+    resp.raise_for_status()
 
 # ── 조회 기간 계산 ────────────────────────────────────────────────────────────
 def get_time_range():
@@ -522,6 +561,26 @@ def load_archive():
 def save_archive(archive):
     with open(ARCHIVE_FILE, "w", encoding="utf-8") as f:
         json.dump(archive, f, ensure_ascii=False, indent=2)
+
+# 일광고비·순위 탭 데이터 캐시 (수동 월 실행 시 재계산 생략하고 재사용)
+TABS_CACHE = "tabs_cache.json"
+
+def load_tabs_cache():
+    if os.path.exists(TABS_CACHE):
+        try:
+            with open(TABS_CACHE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_tabs_cache(daily_ads, d_start, d_stop, rankings):
+    try:
+        with open(TABS_CACHE, "w", encoding="utf-8") as f:
+            json.dump({"daily_ads": daily_ads, "daily_start": d_start,
+                       "daily_stop": d_stop, "rankings": rankings}, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"  ⚠️  탭 캐시 저장 실패: {e}")
 
 # ── 병합 (같은 광고명은 최신 수집값으로 교체 = upsert) ───────────────────────
 def merge_archive(existing, new_results, period_label):
@@ -1253,8 +1312,11 @@ def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, 
         modes = all_modes
     for media_tag, media_type, category, extra_keyword in modes:
         print(f"🎯 {category or media_tag} ({media_type}) 수집")
-        results = collect_media(month_tag, date_start, date_stop, media_tag, media_type, category, extra_keyword)
-        merged = merge_archive(merged, results, month_tag)
+        try:
+            results = collect_media(month_tag, date_start, date_stop, media_tag, media_type, category, extra_keyword)
+            merged = merge_archive(merged, results, month_tag)
+        except Exception as e:
+            print(f"  ⚠️  [{month_tag}] {category or media_tag} 수집 실패(건너뜀): {e}")
     return merged
 
 def main():
@@ -1265,38 +1327,61 @@ def main():
     auto_archive = os.environ.get("AUTO_ARCHIVE", "").strip().lower() in ("1", "yes", "true")
 
     # ── 1) 고효율 아카이브 수집 ──
-    if MONTH_TAG:
-        # (수동) 지정한 월만 수집
-        date_start, date_stop = get_time_range()
-        print(f"수집 유형: {MEDIA_MODE}")
-        merged = run_archive_for_month(merged, MONTH_TAG, MEDIA_MODE, date_start, date_stop)
+    try:
+        if MONTH_TAG:
+            # (수동) 지정한 월만 수집
+            date_start, date_stop = get_time_range()
+            print(f"수집 유형: {MEDIA_MODE}")
+            merged = run_archive_for_month(merged, MONTH_TAG, MEDIA_MODE, date_start, date_stop)
+            save_archive(merged)
+            print(f"  → 병합 후 총 {len(merged)}개")
+        elif auto_archive:
+            # (매일 자동) 최근 3개월(지지난 달·지난 달·이번 달)
+            today = datetime.today()
+            tags, first = [], today.replace(day=1)
+            for _ in range(3):
+                tags.append(first.strftime("%y.%m"))
+                first = (first - timedelta(days=1)).replace(day=1)
+            tags = list(reversed(tags))
+            print(f"🗓️  자동 아카이브 갱신(최근 3개월): {', '.join(tags)}")
+            for tag in tags:
+                merged = run_archive_for_month(merged, tag, "all")
+            save_archive(merged)
+            print(f"  → 병합 후 총 {len(merged)}개")
+        else:
+            print("ℹ️  아카이브 갱신 안 함 → 일광고비/순위만 갱신")
+    except Exception as e:
+        print(f"  ⚠️  아카이브 단계 오류(기존 데이터 유지하고 계속): {e}")
         save_archive(merged)
-        print(f"  → 병합 후 총 {len(merged)}개")
-    elif auto_archive:
-        # (매일 자동) 이번 달 + 지난 달(월 넘겨 집행분까지 갱신)
-        today = datetime.today()
-        # 최근 3개월(지지난 달·지난 달·이번 달) — 3개월 집행 광고까지 갱신
-        tags, first = [], today.replace(day=1)
-        for _ in range(3):
-            tags.append(first.strftime("%y.%m"))
-            first = (first - timedelta(days=1)).replace(day=1)   # 한 달 앞으로
-        tags = list(reversed(tags))                              # 오래된 달부터
-        print(f"🗓️  자동 아카이브 갱신(최근 3개월): {', '.join(tags)}")
-        for tag in tags:
-            merged = run_archive_for_month(merged, tag, "all")
-        save_archive(merged)
-        print(f"  → 병합 후 총 {len(merged)}개")
-    else:
-        print("ℹ️  아카이브 갱신 안 함 → 일광고비/순위만 갱신")
 
-    # ── 2) 일광고비(이번주 불씨): 항상 최근 7일 기준 새로 계산 ──
+    # ── 2) 일광고비·순위 ──
     today = datetime.today()
     d_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
     d_stop  = today.strftime("%Y-%m-%d")
-    daily_ads = collect_daily_spikes(d_start, d_stop)
 
-    # ── 2.5) 순위(월별/주별): 항상 새로 계산 ──
-    rankings = collect_rankings()
+    if MONTH_TAG:
+        # (수동 월 실행) 일광고비·순위는 재계산 생략 → 마지막 계산값을 그대로 유지 (호출량↓)
+        print("ℹ️  수동 월 실행 → 일광고비·순위는 이전 계산값 유지(재계산 생략)")
+        cache = load_tabs_cache()
+        daily_ads = cache.get("daily_ads", [])
+        d_start   = cache.get("daily_start", d_start)
+        d_stop    = cache.get("daily_stop", d_stop)
+        rankings  = cache.get("rankings")
+        if not cache:
+            print("  ⚠️  캐시 없음 → 일광고비·순위 탭은 다음 정기 실행(8·14·20·2시) 때 채워집니다")
+    else:
+        try:
+            daily_ads = collect_daily_spikes(d_start, d_stop)
+        except Exception as e:
+            print(f"  ⚠️  일광고비 단계 오류(건너뜀): {e}")
+            daily_ads = []
+        try:
+            rankings = collect_rankings()
+        except Exception as e:
+            print(f"  ⚠️  순위 단계 오류(건너뜀): {e}")
+            rankings = None
+        # 다음 수동 실행에서 재사용할 수 있게 저장
+        save_tabs_cache(daily_ads, d_start, d_stop, rankings)
 
     # ── 3) HTML 생성 ──
     with open("index.html", "w", encoding="utf-8") as f:
