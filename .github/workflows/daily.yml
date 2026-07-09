@@ -1,17 +1,19 @@
 name: 광고 아카이브 자동 업데이트
 
 on:
-  # ── 자동 실행: 일광고비(이번주 불씨) 탭 갱신용 ──
-  # 3시간마다 실행. 월 태그 없이 돌면 아카이브는 그대로 두고 일광고비 탭만 새로 계산.
-  # cron은 UTC 기준. "0 */3 * * *" = 3시간마다. 빈도는 자유롭게 조정하세요.
   schedule:
-    - cron: "0 */3 * * *"
+    # ── 6시간마다: 일광고비·순위 탭만 갱신 (아카이브는 그대로) ──
+    # cron은 UTC 기준. "0 */6 * * *" = 6시간마다.
+    - cron: "0 */6 * * *"
+    # ── 매일 08:00 KST(=23:00 UTC): 고효율 아카이브(이번 달+지난 달) 자동 갱신 ──
+    # 이 스케줄로 돌 때만 아카이브를 새로 수집한다. (일광고비·순위도 함께 갱신됨)
+    - cron: "0 23 * * *"
 
-  # ── 수동 실행: 월별 고효율 아카이브 수집용 ──
+  # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
     inputs:
       month_tag:
-        description: "조회할 월 태그 (예: 26.05) — 비우면 일광고비 탭만 갱신"
+        description: "조회할 월 태그 (예: 26.05) — 비우면 일광고비·순위 탭만 갱신"
         required: false
         default: ""
       media_mode:
@@ -54,6 +56,8 @@ jobs:
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
+          # 08:00 KST(23:00 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 켜짐
+          AUTO_ARCHIVE: ${{ github.event.schedule == '0 23 * * *' && 'yes' || '' }}
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
@@ -62,6 +66,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html archive.json images/
           TAG="${{ github.event.inputs.month_tag }}"
-          [ -z "$TAG" ] && TAG="일광고비"
+          [ -z "$TAG" ] && TAG="자동갱신"
           git diff --staged --quiet || git commit -m "chore: [$TAG] 광고 아카이브 업데이트 $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M KST')"
           git push
