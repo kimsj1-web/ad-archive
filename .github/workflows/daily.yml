@@ -2,10 +2,10 @@ name: 광고 아카이브 자동 업데이트
 
 on:
   schedule:
-    # ── 6시간마다: 일광고비·순위 탭만 갱신 (아카이브는 그대로) ──
-    # cron은 UTC 기준. "0 */6 * * *" = 6시간마다.
-    - cron: "0 */6 * * *"
-    # ── 매일 08:00 KST(=23:00 UTC): 고효율 아카이브(이번 달+지난 달) 자동 갱신 ──
+    # ── 일광고비·순위 탭 갱신 (아카이브는 그대로) ──
+    # KST 14·20·2시 = UTC 5·11·17시. (KST 8시는 아래 아카이브 cron이 함께 갱신)
+    - cron: "0 5,11,17 * * *"
+    # ── 매일 08:00 KST(=23:00 UTC): 고효율 아카이브(최근 3개월) 자동 갱신 ──
     # 이 스케줄로 돌 때만 아카이브를 새로 수집한다. (일광고비·순위도 함께 갱신됨)
     - cron: "0 23 * * *"
 
@@ -64,7 +64,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html archive.json images/
+          git add index.html archive.json tabs_cache.json images/
           TAG="${{ github.event.inputs.month_tag }}"
           [ -z "$TAG" ] && TAG="자동갱신"
           git diff --staged --quiet || git commit -m "chore: [$TAG] 광고 아카이브 업데이트 $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M KST')"
