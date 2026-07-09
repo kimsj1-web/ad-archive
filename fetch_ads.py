@@ -181,12 +181,15 @@ def fetch_video_thumbnail(video_id):
         return ""
 
 # ── 미디어 파일 다운로드 & 저장 ──────────────────────────────────────────────
-def download_media(url, filename):
-    """URL에서 파일 다운로드 후 images/ 폴더에 저장. 로컬 경로 반환"""
+def download_media(url, filename, skip_if_exists=False):
+    """URL에서 파일 다운로드 후 images/ 폴더에 저장. 로컬 경로 반환.
+    skip_if_exists=True면 같은 파일이 이미 있을 때 재다운로드하지 않음(영상 등)."""
     if not url:
         return ""
     os.makedirs(IMAGES_DIR, exist_ok=True)
     filepath = os.path.join(IMAGES_DIR, filename)
+    if skip_if_exists and os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+        return filepath
     try:
         resp = requests.get(url, timeout=30, stream=True)
         resp.raise_for_status()
@@ -359,12 +362,18 @@ def collect_daily_spikes(date_start, date_stop):
 
         print(f"  🔥 {grade} | {name[:45]} | 일최고 {peak_daily:,.0f}원 ({peak_date})")
 
-        # 이미지 다운로드 (릴스는 썸네일을 영상 경로로 확보 — 영상 파일은 받지 않음)
+        # 릴스는 영상까지 받아서 팝업 재생, 나머지는 이미지 썸네일만
         creative_id = fetch_ad_creative_id(ad_ids[0])
-        fetch_type = "video" if "릴스" in name else "image"
+        is_reels = "릴스" in name
+        fetch_type = "video" if is_reels else "image"
         media = fetch_creative_media(creative_id, fetch_type)
         img_filename = safe_filename(name, "daily", "jpg")
         local_img = download_media(media["image_url"], img_filename)
+
+        local_video = ""
+        if is_reels and media.get("video_url"):
+            vid_filename = safe_filename(name, "daily", "mp4")
+            local_video = download_media(media["video_url"], vid_filename)
 
         results.append({
             "name":             name,
@@ -376,12 +385,132 @@ def collect_daily_spikes(date_start, date_stop):
             "cvr":              cvr,
             "grade":            grade,
             "image_url":        local_img if local_img else media["image_url"],
+            "is_video":         is_reels,
+            "video_url":        local_video if local_video else media.get("video_url", ""),
+            "video_permalink":  media.get("video_permalink", ""),
         })
 
     # 일 최고 지출 큰 순으로 정렬
     results.sort(key=lambda x: -x["peak_daily_spend"])
     print(f"  → 이번주 불씨 {len(results)}개")
     return results
+
+# ── 순위(월별/주별) 집계 ──────────────────────────────────────────────────────
+def _rank_entry(name, acc):
+    spend = acc["spend"]
+    return {
+        "name":        name,
+        "spend":       round(spend),
+        "cpc":         round(spend / acc["clicks"]) if acc["clicks"] else 0,
+        "cvr":         round(acc["purch"] / acc["link"] * 100, 2) if acc["link"] else 0,
+        "conversions": round(acc["purch"]),
+        "media":       "video" if "F_V" in name else "image",  # F_I 릴스는 이미지로 분류(등급체계 기준)
+        "product":     get_product(name),
+    }
+
+def _rank_visible_names(ads):
+    """정렬(총광고비/CPC/전환률) × 유형(전체/이미지/영상) × 제품군(전체/빙과/제과)
+    모든 조합의 TOP 20에 한 번이라도 등장하는 광고명 집합. 필터로 새로 올라오는 광고까지 포함."""
+    DESC = {"spend": True, "cvr": True, "cpc": False}   # cpc는 낮을수록 위
+    names = set()
+    for metric, desc in DESC.items():
+        for mf in ("all", "image", "video"):
+            for pf in ("all", "빙과", "제과"):
+                pool = [a for a in ads
+                        if (mf == "all" or a["media"] == mf)
+                        and (pf == "all" or a["product"] == pf)]
+                pool.sort(key=lambda a: a[metric], reverse=desc)
+                for a in pool[:20]:
+                    names.add(a["name"])
+    return names
+
+def collect_rankings():
+    """이번 달(1일~오늘)·이번 주(월~오늘) F_I/F_V 광고 성과를 광고명 단위로 집계.
+    월간 일자 데이터를 광고별로 1회만 받아, 주간은 그 안에서 날짜로 걸러 재사용."""
+    today = datetime.today()
+    m_start = today.replace(day=1).strftime("%Y-%m-%d")
+    m_stop  = today.strftime("%Y-%m-%d")
+    monday  = today - timedelta(days=today.weekday())          # 이번 주 월요일
+    w_start = monday.strftime("%Y-%m-%d")
+    w_stop  = today.strftime("%Y-%m-%d")
+    print(f"🏆 순위 집계: 월간 {m_start}~{m_stop} / 주간 {w_start}~{w_stop}")
+
+    try:
+        active = fetch_account_active_ads(m_start, m_stop)
+    except Exception as e:
+        print(f"  ⚠️  순위용 광고 목록 조회 실패 → 순위 탭 건너뜀: {e}")
+        return {"month": {"label": f"{m_start} ~ {m_stop}", "ads": []},
+                "week":  {"label": f"{w_start} ~ {w_stop}", "ads": []}}
+
+    name_to_ids = {}
+    for r in active:
+        name = r.get("ad_name", "")
+        if ("F_I" not in name) and ("F_V" not in name):
+            continue
+        if float(r.get("spend", 0)) <= 0:
+            continue
+        name_to_ids.setdefault(name, []).append(r.get("ad_id", ""))
+
+    print(f"  → 대상 광고 {len(name_to_ids)}개 (월간 일자 조회 중)")
+    month_ads, week_ads = [], []
+    for name, ad_ids in name_to_ids.items():
+        m = {"spend": 0.0, "clicks": 0.0, "link": 0.0, "purch": 0.0}
+        w = {"spend": 0.0, "clicks": 0.0, "link": 0.0, "purch": 0.0}
+        for ad_id in ad_ids:
+            for d in fetch_ad_daily_rows(ad_id, m_start, m_stop):
+                dt = d.get("date_start", "")
+                sp = float(d.get("spend", 0))
+                cl = float(d.get("clicks", 0))
+                lk = float(d.get("inline_link_clicks", 0))
+                pu = 0.0
+                for a in d.get("actions", []):
+                    if a.get("action_type") == "purchase":
+                        pu += float(a.get("value", 0))
+                m["spend"] += sp; m["clicks"] += cl; m["link"] += lk; m["purch"] += pu
+                if w_start <= dt <= w_stop:
+                    w["spend"] += sp; w["clicks"] += cl; w["link"] += lk; w["purch"] += pu
+        if m["spend"] > 0:
+            month_ads.append(_rank_entry(name, m))
+        if w["spend"] > 0:
+            week_ads.append(_rank_entry(name, w))
+
+    print(f"  → 월간 {len(month_ads)}개 / 주간 {len(week_ads)}개 집계 완료")
+
+    # ── 순위표에 실제 등장하는 광고만 썸네일/영상 다운로드 ──
+    visible = _rank_visible_names(month_ads) | _rank_visible_names(week_ads)
+    print(f"  → 순위 등장 광고 {len(visible)}개 썸네일 수집")
+    media_map = {}
+    for name in visible:
+        ad_ids = name_to_ids.get(name, [])
+        if not ad_ids:
+            continue
+        is_video = ("F_V" in name) or ("릴스" in name)   # F_V + F_I릴스 = 영상(재생 대상)
+        creative_id = fetch_ad_creative_id(ad_ids[0])
+        media = fetch_creative_media(creative_id, "video" if is_video else "image")
+        local_img = download_media(media["image_url"], safe_filename(name, "rank", "jpg"))
+        local_video = ""
+        if is_video and media.get("video_url"):
+            # 영상은 용량이 커서 이미 받은 파일이 있으면 재다운로드 생략
+            local_video = download_media(media["video_url"], safe_filename(name, "rank", "mp4"), skip_if_exists=True)
+        media_map[name] = {
+            "image_url":       local_img if local_img else media["image_url"],
+            "is_video":        is_video,
+            "video_url":       local_video if local_video else media.get("video_url", ""),
+            "video_permalink": media.get("video_permalink", ""),
+        }
+
+    for lst in (month_ads, week_ads):
+        for a in lst:
+            mm = media_map.get(a["name"], {})
+            a["image_url"]       = mm.get("image_url", "")
+            a["is_video"]        = mm.get("is_video", False)
+            a["video_url"]       = mm.get("video_url", "")
+            a["video_permalink"] = mm.get("video_permalink", "")
+
+    return {
+        "month": {"label": f"{m_start} ~ {m_stop}", "ads": month_ads},
+        "week":  {"label": f"{w_start} ~ {w_stop}", "ads": week_ads},
+    }
 
 # ── 누적 아카이브 로드/저장 ───────────────────────────────────────────────────
 def load_archive():
@@ -434,7 +563,7 @@ def get_product(name):
         return "제과"
     return "기타"
 
-def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
+def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings=None):
     KST = timezone(timedelta(hours=9))
     updated = datetime.now(KST).strftime("%Y-%m-%d %H:%M (KST)")
     all_periods = sorted({p for ad in ads_data for p in ad.get("periods", [])})
@@ -501,15 +630,32 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
     for ad in daily_ads:
         gcolor = get_daily_grade_color(ad["grade"])
         img = ad.get("image_url", "")
+        is_video = ad.get("is_video", False)
+        video = ad.get("video_url", "")
+        video_permalink = ad.get("video_permalink", "")
         if img:
             img_tag = f'<img src="{img}" alt="광고 미디어" onerror="this.style.display=\'none\'">'
         else:
             img_tag = '<div class="no-img">미리보기 없음</div>'
+
+        play_overlay = ""
+        card_click_attr = ""
+        card_classes = "fire-card"
+        if is_video and video:
+            play_overlay = '<div class="play-icon">▶</div>'
+            card_click_attr = f' data-video="{video}"'
+            card_classes += " has-video"
+        elif is_video and video_permalink:
+            play_overlay = '<div class="play-icon">▶</div>'
+            card_click_attr = f' data-permalink="{video_permalink}"'
+            card_classes += " has-permalink"
+
         product = get_product(ad["name"])
         daily_cards_html += f"""
-        <div class="fire-card" data-grade="{ad['grade']}" data-product="{product}">
+        <div class="{card_classes}" data-grade="{ad['grade']}" data-product="{product}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
+                {play_overlay}
                 <span class="grade-badge" style="background:{gcolor}">{ad['grade']}</span>
             </div>
             <div class="card-body">
@@ -524,6 +670,10 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
                 </div>
             </div>
         </div>"""
+
+    # ── 순위 데이터 (JS에서 정렬/필터/TOP20) ──
+    rankings = rankings or {"month": {"label": "", "ads": []}, "week": {"label": "", "ads": []}}
+    rank_json = json.dumps(rankings, ensure_ascii=False)
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
@@ -583,6 +733,31 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
   .fire-card {{ background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; transition:transform .2s,box-shadow .2s; }}
   .fire-card:hover {{ transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.4); }}
   .value.peak {{ color:#FF6B00; }}
+  .fire-card.has-video {{ cursor:pointer; }}
+  .fire-card.has-video:hover .play-icon {{ background:rgba(0,0,0,.8); }}
+  /* 순위표 */
+  .rank-table-wrap {{ padding:8px 32px 40px; overflow-x:auto; }}
+  .rank-table {{ width:100%; border-collapse:collapse; font-size:13px; }}
+  .rank-table th, .rank-table td {{ padding:12px 14px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--border); }}
+  .rank-table th {{ color:var(--muted); font-weight:600; font-size:12px; position:sticky; top:0; background:var(--bg); }}
+  .rank-table th.rank-col, .rank-table td.rank-col {{ text-align:center; width:48px; }}
+  .rank-table th.name-col, .rank-table td.name-col {{ text-align:left; white-space:normal; min-width:220px; }}
+  .rank-table td.rank-col {{ font-weight:700; font-size:15px; }}
+  .rank-table th.active-col {{ color:var(--text); }}
+  .rank-table td.active-col {{ color:#FF6B00; font-weight:700; }}
+  .rank-table tbody tr:hover {{ background:var(--surface); }}
+  .rank-table td.thumb {{ width:56px; padding-right:0; }}
+  .rank-table tr.clickable {{ cursor:pointer; }}
+  .rtw {{ position:relative; width:44px; height:44px; border-radius:8px; overflow:hidden; background:#23232B; display:flex; align-items:center; justify-content:center; }}
+  .rtw img {{ width:100%; height:100%; object-fit:cover; display:block; }}
+  .rtw .noimg {{ color:var(--muted); font-size:10px; }}
+  .rtw .pl {{ position:absolute; right:2px; bottom:2px; width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,.7); color:#fff; font-size:8px; display:flex; align-items:center; justify-content:center; }}
+  .mchip {{ display:inline-block; margin-left:6px; padding:1px 6px; border-radius:5px; font-size:10px; font-weight:600; vertical-align:middle; }}
+  .mchip.image {{ background:rgba(52,199,89,.15); color:#34C759; }}
+  .mchip.video {{ background:rgba(191,90,242,.15); color:#BF5AF2; }}
+  .mtag {{ display:inline-block; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; }}
+  .mtag.image {{ background:rgba(52,199,89,.15); color:#34C759; }}
+  .mtag.video {{ background:rgba(191,90,242,.15); color:#BF5AF2; }}
   .empty {{ grid-column:1/-1; text-align:center; padding:80px 0; color:var(--muted); }}
 </style>
 </head>
@@ -601,7 +776,46 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
 </div>
 
 <section class="tab-panel" id="rankPanel">
-  <div class="panel-pad"><div class="empty">순위 탭은 준비 중입니다. 기준이 정해지면 추가할게요.</div></div>
+  <div class="section-head">
+    <h2 class="section-title">🏆 광고 성과 순위 TOP 20</h2>
+    <span class="section-sub" id="rankSub"></span>
+  </div>
+  <div class="product-filters">
+    <span class="filter-label">기간</span>
+    <button class="filter-btn rperiod-btn active" data-period="month">월별</button>
+    <button class="filter-btn rperiod-btn" data-period="week">주별</button>
+    <div class="divider"></div>
+    <span class="filter-label">정렬</span>
+    <button class="filter-btn rmetric-btn active" data-metric="spend">총 광고비</button>
+    <button class="filter-btn rmetric-btn" data-metric="cpc">CPC</button>
+    <button class="filter-btn rmetric-btn" data-metric="cvr">전환률</button>
+    <div class="divider"></div>
+    <span class="filter-label">유형</span>
+    <button class="filter-btn rmedia-btn active" data-media="all">전체</button>
+    <button class="filter-btn rmedia-btn" data-media="image">이미지</button>
+    <button class="filter-btn rmedia-btn" data-media="video">영상</button>
+    <div class="divider"></div>
+    <span class="filter-label">제품군</span>
+    <button class="filter-btn rproduct-btn active" data-product="all">전체</button>
+    <button class="filter-btn rproduct-btn" data-product="빙과">빙과</button>
+    <button class="filter-btn rproduct-btn" data-product="제과">제과</button>
+  </div>
+  <div class="rank-table-wrap">
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th class="rank-col">#</th>
+          <th class="name-col" colspan="2">광고명</th>
+          <th data-col="spend">총 광고비</th>
+          <th data-col="cpc">CPC</th>
+          <th data-col="cvr">전환률</th>
+          <th>구매 수</th>
+        </tr>
+      </thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+    <div class="empty" id="rankEmpty" style="display:none;">해당 조건의 광고가 없습니다.</div>
+  </div>
 </section>
 
 <section class="tab-panel active" id="dailyPanel">
@@ -742,8 +956,8 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
   const modalVideo = document.getElementById('modalVideo');
   const modalClose = document.getElementById('modalClose');
 
-  // 저장된 영상 → 모달 재생
-  document.querySelectorAll('#archivePanel .card.has-video').forEach(card => {{
+  // 저장된 영상 → 모달 재생 (아카이브 + 일광고비 릴스)
+  document.querySelectorAll('#archivePanel .card.has-video, #dailyPanel .fire-card.has-video').forEach(card => {{
     card.addEventListener('click', () => {{
       const src = card.dataset.video;
       if (!src) return;
@@ -753,8 +967,8 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
     }});
   }});
 
-  // 다운로드 불가 영상 → 메타 페이지로 이동
-  document.querySelectorAll('#archivePanel .card.has-permalink').forEach(card => {{
+  // 다운로드 불가 영상 → 메타 페이지로 이동 (아카이브 + 일광고비 릴스)
+  document.querySelectorAll('#archivePanel .card.has-permalink, #dailyPanel .fire-card.has-permalink').forEach(card => {{
     card.addEventListener('click', () => {{
       const url = card.dataset.permalink;
       if (!url) return;
@@ -816,6 +1030,81 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop=""):
     }});
   }});
   applyDaily();
+
+  // ── 순위 탭 ──
+  const RANK_DATA = {rank_json};
+  const rankBody  = document.getElementById('rankBody');
+  const rankSub   = document.getElementById('rankSub');
+  const rankEmpty = document.getElementById('rankEmpty');
+  let rPeriod = 'month', rMetric = 'spend', rMedia = 'all', rProduct = 'all';
+  const METRIC_DESC = {{ spend: true, cvr: true, cpc: false }};  // true=내림차순, cpc는 낮을수록 위
+  const fmt = n => (n || 0).toLocaleString('ko-KR');
+  function rankThumb(a) {{
+    const play = a.is_video ? '<span class="pl">▶</span>' : '';
+    const inner = a.image_url
+      ? `<img src="${{a.image_url}}" onerror="this.style.display='none'">`
+      : `<span class="noimg">${{a.product || ''}}</span>`;
+    return `<div class="rtw">${{inner}}${{play}}</div>`;
+  }}
+  function renderRank() {{
+    const src = RANK_DATA[rPeriod] || {{ label: '', ads: [] }};
+    rankSub.textContent = src.label;
+    let ads = (src.ads || []).filter(a =>
+      (rMedia === 'all' || a.media === rMedia) &&
+      (rProduct === 'all' || a.product === rProduct)
+    );
+    const desc = METRIC_DESC[rMetric];
+    ads = ads.slice().sort((a, b) => desc ? b[rMetric] - a[rMetric] : a[rMetric] - b[rMetric]).slice(0, 20);
+    document.querySelectorAll('.rank-table th[data-col]').forEach(th =>
+      th.classList.toggle('active-col', th.dataset.col === rMetric)
+    );
+    if (!ads.length) {{ rankBody.innerHTML = ''; rankEmpty.style.display = ''; return; }}
+    rankEmpty.style.display = 'none';
+    rankBody.innerHTML = ads.map((a, i) => {{
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+      const mlabel = a.media === 'video' ? '영상' : '이미지';
+      const cls = m => rMetric === m ? ' class="active-col"' : '';
+      let attr = '', klass = '';
+      if (a.is_video && a.video_url) {{ attr = ` data-video="${{a.video_url}}"`; klass = ' class="clickable"'; }}
+      else if (a.is_video && a.video_permalink) {{ attr = ` data-permalink="${{a.video_permalink}}"`; klass = ' class="clickable"'; }}
+      return `<tr${{klass}}${{attr}}>
+        <td class="rank-col">${{medal}}</td>
+        <td class="thumb">${{rankThumb(a)}}</td>
+        <td class="name-col">${{a.name}}<span class="mchip ${{a.media}}">${{mlabel}}</span></td>
+        <td${{cls('spend')}}>${{fmt(a.spend)}}원</td>
+        <td${{cls('cpc')}}>${{fmt(a.cpc)}}원</td>
+        <td${{cls('cvr')}}>${{a.cvr}}%</td>
+        <td>${{fmt(a.conversions)}}</td>
+      </tr>`;
+    }}).join('');
+  }}
+  // 순위표 영상(릴스/F_V) 클릭 → 팝업 재생 (행이 동적 생성이라 위임 방식)
+  rankBody.addEventListener('click', e => {{
+    const tr = e.target.closest('tr[data-video], tr[data-permalink]');
+    if (!tr) return;
+    if (tr.dataset.video) {{
+      modalVideo.src = tr.dataset.video;
+      modal.classList.add('open');
+      modalVideo.play().catch(() => {{}});
+    }} else if (tr.dataset.permalink) {{
+      window.open(tr.dataset.permalink, '_blank');
+    }}
+  }});
+  function wireRank(cls, setter) {{
+    document.querySelectorAll(cls).forEach(btn => {{
+      btn.addEventListener('click', () => {{
+        document.querySelectorAll(cls).forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setter(btn);
+        renderRank();
+      }});
+    }});
+  }}
+  wireRank('.rperiod-btn',  b => rPeriod  = b.dataset.period);
+  wireRank('.rmetric-btn',  b => rMetric  = b.dataset.metric);
+  wireRank('.rmedia-btn',   b => rMedia   = b.dataset.media);
+  wireRank('.rproduct-btn', b => rProduct = b.dataset.product);
+  renderRank();
 </script>
 </body>
 </html>"""
@@ -918,7 +1207,8 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
         local_video = ""
         if actual_type == "video" and media["video_url"]:
             vid_filename = safe_filename(ad_name, "video", "mp4")
-            local_video = download_media(media["video_url"], vid_filename)
+            # 영상은 용량이 커서 이미 받은 파일이 있으면 재다운로드 생략 (매일 갱신 대비)
+            local_video = download_media(media["video_url"], vid_filename, skip_if_exists=True)
 
         new_results.append({
             "name":                ad_name,
@@ -941,48 +1231,76 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
     print(f"  → [{month_tag}] {label} 고효율 광고 {len(new_results)}개")
     return new_results
 
+def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, date_stop=None):
+    """지정한 월 태그의 고효율 아카이브를 수집해 병합(교체) 후 반환."""
+    if not (date_start and date_stop):
+        yy, mm = month_tag.split(".")
+        start = datetime(int("20" + yy), int(mm), 1)
+        stop = datetime.today()
+        date_start, date_stop = start.strftime("%Y-%m-%d"), stop.strftime("%Y-%m-%d")
+    print(f"📡 [{month_tag}] 아카이브 수집 (성과 기간: {date_start} ~ {date_stop})")
+
+    all_modes = [
+        ("F_I", "image", None, ""),
+        ("F_V", "video", None, ""),
+        ("F_V", "video", "쩜오건", "쩜오건"),  # 쩜오건 전용 (50만원↑)
+    ]
+    if media_mode == "image":
+        modes = [("F_I", "image", None, "")]
+    elif media_mode == "video":
+        modes = [("F_V", "video", None, ""), ("F_V", "video", "쩜오건", "쩜오건")]
+    else:
+        modes = all_modes
+    for media_tag, media_type, category, extra_keyword in modes:
+        print(f"🎯 {category or media_tag} ({media_type}) 수집")
+        results = collect_media(month_tag, date_start, date_stop, media_tag, media_type, category, extra_keyword)
+        merged = merge_archive(merged, results, month_tag)
+    return merged
+
 def main():
     existing = load_archive()
     print(f"기존 아카이브 {len(existing)}개")
     merged = existing
 
-    # ── 1) 월 태그가 있을 때만 고효율 아카이브 수집/병합 ──
+    auto_archive = os.environ.get("AUTO_ARCHIVE", "").strip().lower() in ("1", "yes", "true")
+
+    # ── 1) 고효율 아카이브 수집 ──
     if MONTH_TAG:
+        # (수동) 지정한 월만 수집
         date_start, date_stop = get_time_range()
-        print(f"📡 [{MONTH_TAG}] 아카이브 수집 중... (성과 기간: {date_start} ~ {date_stop})")
-
-        # (media_tag, media_type, category, extra_keyword)
-        all_modes = [
-            ("F_I", "image", None, ""),
-            ("F_V", "video", None, ""),
-            ("F_V", "video", "쩜오건", "쩜오건"),  # 쩜오건 전용 (50만원↑)
-        ]
-        if MEDIA_MODE == "image":
-            modes = [("F_I", "image", None, "")]
-        elif MEDIA_MODE == "video":
-            modes = [("F_V", "video", None, ""), ("F_V", "video", "쩜오건", "쩜오건")]
-        else:
-            modes = all_modes
-        print(f"  수집 유형: {MEDIA_MODE} → {[ (m[2] or m[0]) for m in modes]}")
-        for media_tag, media_type, category, extra_keyword in modes:
-            print(f"\n🎯 {category or media_tag} ({media_type}) 수집")
-            results = collect_media(MONTH_TAG, date_start, date_stop, media_tag, media_type, category, extra_keyword)
-            merged = merge_archive(merged, results, MONTH_TAG)
-
+        print(f"수집 유형: {MEDIA_MODE}")
+        merged = run_archive_for_month(merged, MONTH_TAG, MEDIA_MODE, date_start, date_stop)
         save_archive(merged)
-        print(f"\n  → 병합 후 총 {len(merged)}개")
+        print(f"  → 병합 후 총 {len(merged)}개")
+    elif auto_archive:
+        # (매일 자동) 이번 달 + 지난 달(월 넘겨 집행분까지 갱신)
+        today = datetime.today()
+        # 최근 3개월(지지난 달·지난 달·이번 달) — 3개월 집행 광고까지 갱신
+        tags, first = [], today.replace(day=1)
+        for _ in range(3):
+            tags.append(first.strftime("%y.%m"))
+            first = (first - timedelta(days=1)).replace(day=1)   # 한 달 앞으로
+        tags = list(reversed(tags))                              # 오래된 달부터
+        print(f"🗓️  자동 아카이브 갱신(최근 3개월): {', '.join(tags)}")
+        for tag in tags:
+            merged = run_archive_for_month(merged, tag, "all")
+        save_archive(merged)
+        print(f"  → 병합 후 총 {len(merged)}개")
     else:
-        print("ℹ️  MONTH_TAG 없음 → 아카이브는 기존 유지, 일광고비 탭만 갱신")
+        print("ℹ️  아카이브 갱신 안 함 → 일광고비/순위만 갱신")
 
-    # ── 2) 일광고비(이번주 불씨): 월 태그와 무관하게 항상 최근 7일 기준 새로 계산 ──
+    # ── 2) 일광고비(이번주 불씨): 항상 최근 7일 기준 새로 계산 ──
     today = datetime.today()
     d_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
     d_stop  = today.strftime("%Y-%m-%d")
     daily_ads = collect_daily_spikes(d_start, d_stop)
 
+    # ── 2.5) 순위(월별/주별): 항상 새로 계산 ──
+    rankings = collect_rankings()
+
     # ── 3) HTML 생성 ──
     with open("index.html", "w", encoding="utf-8") as f:
-        f.write(build_html(merged, daily_ads, d_start, d_stop))
+        f.write(build_html(merged, daily_ads, d_start, d_stop, rankings))
     print("✅ 완료")
 
 if __name__ == "__main__":
