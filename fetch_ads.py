@@ -929,11 +929,13 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(총 광고비 100만원 이상)을 충족하는 광고가 없습니다.</div>'}
 </div>
+</section>
+
+<!-- 영상 팝업: 탭 밖 최상단에 두어 어느 탭에서 열든 현재 탭 위에 표시 -->
 <div class="modal" id="videoModal">
   <button class="modal-close" id="modalClose">&times;</button>
   <video id="modalVideo" controls></video>
 </div>
-</section>
 <script>
   const cards = [...document.querySelectorAll('#archivePanel .card')];
   const countEl = document.getElementById('count');
