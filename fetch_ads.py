@@ -770,6 +770,8 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .modal {{ position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:1000; padding:24px; }}
   .modal.open {{ display:flex; }}
   .modal video {{ max-width:90vw; max-height:85vh; border-radius:8px; background:#000; }}
+  .modal img {{ max-width:90vw; max-height:85vh; border-radius:8px; object-fit:contain; }}
+  #modalVideo, #modalImage {{ display:none; }}
   .modal-close {{ position:absolute; top:20px; right:28px; font-size:32px; color:#fff; cursor:pointer; line-height:1; background:none; border:none; }}
   .card-body {{ padding:16px; }}
   .ad-name {{ font-size:11px; color:var(--muted); margin-bottom:12px; line-height:1.5; word-break:break-all; }}
@@ -935,6 +937,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
 <div class="modal" id="videoModal">
   <button class="modal-close" id="modalClose">&times;</button>
   <video id="modalVideo" controls></video>
+  <img id="modalImage" alt="광고 이미지">
 </div>
 <script>
   const cards = [...document.querySelectorAll('#archivePanel .card')];
@@ -1012,20 +1015,33 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     }});
   }});
 
-  // ── 영상 모달 ──
+  // ── 영상·이미지 모달 ──
   const modal = document.getElementById('videoModal');
   const modalVideo = document.getElementById('modalVideo');
+  const modalImage = document.getElementById('modalImage');
   const modalClose = document.getElementById('modalClose');
+
+  function openVideoModal(src) {{
+    if (!src) return;
+    modalImage.style.display = 'none';
+    modalVideo.style.display = '';
+    modalVideo.src = src;
+    modal.classList.add('open');
+    modalVideo.play().catch(() => {{}});
+  }}
+  function openImageModal(src) {{
+    if (!src) return;
+    modalVideo.pause();
+    modalVideo.src = '';
+    modalVideo.style.display = 'none';
+    modalImage.style.display = '';
+    modalImage.src = src;
+    modal.classList.add('open');
+  }}
 
   // 저장된 영상 → 모달 재생 (아카이브 + 일광고비 릴스)
   document.querySelectorAll('#archivePanel .card.has-video, #dailyPanel .fire-card.has-video').forEach(card => {{
-    card.addEventListener('click', () => {{
-      const src = card.dataset.video;
-      if (!src) return;
-      modalVideo.src = src;
-      modal.classList.add('open');
-      modalVideo.play().catch(() => {{}});
-    }});
+    card.addEventListener('click', () => openVideoModal(card.dataset.video));
   }});
 
   // 다운로드 불가 영상 → 메타 페이지로 이동 (아카이브 + 일광고비 릴스)
@@ -1041,6 +1057,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     modal.classList.remove('open');
     modalVideo.pause();
     modalVideo.src = '';
+    modalImage.src = '';
   }}
   modalClose.addEventListener('click', closeModal);
   modal.addEventListener('click', e => {{ if (e.target === modal) closeModal(); }});
@@ -1128,6 +1145,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
       let attr = '', klass = '';
       if (a.is_video && a.video_url) {{ attr = ` data-video="${{a.video_url}}"`; klass = ' class="clickable"'; }}
       else if (a.is_video && a.video_permalink) {{ attr = ` data-permalink="${{a.video_permalink}}"`; klass = ' class="clickable"'; }}
+      else if (a.image_url) {{ attr = ` data-image="${{a.image_url}}"`; klass = ' class="clickable"'; }}
       return `<tr${{klass}}${{attr}}>
         <td class="rank-col">${{medal}}</td>
         <td class="thumb">${{rankThumb(a)}}</td>
@@ -1139,16 +1157,16 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
       </tr>`;
     }}).join('');
   }}
-  // 순위표 영상(릴스/F_V) 클릭 → 팝업 재생 (행이 동적 생성이라 위임 방식)
+  // 순위표 클릭 → 영상은 재생, 이미지는 확대 팝업 (행이 동적 생성이라 위임 방식)
   rankBody.addEventListener('click', e => {{
-    const tr = e.target.closest('tr[data-video], tr[data-permalink]');
+    const tr = e.target.closest('tr[data-video], tr[data-permalink], tr[data-image]');
     if (!tr) return;
     if (tr.dataset.video) {{
-      modalVideo.src = tr.dataset.video;
-      modal.classList.add('open');
-      modalVideo.play().catch(() => {{}});
+      openVideoModal(tr.dataset.video);
     }} else if (tr.dataset.permalink) {{
       window.open(tr.dataset.permalink, '_blank');
+    }} else if (tr.dataset.image) {{
+      openImageModal(tr.dataset.image);
     }}
   }});
   function wireRank(cls, setter) {{
