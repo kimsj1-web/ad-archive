@@ -1024,7 +1024,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   function openVideoModal(src) {{
     if (!src) return;
     modalImage.style.display = 'none';
-    modalVideo.style.display = '';
+    modalVideo.style.display = 'block';
     modalVideo.src = src;
     modal.classList.add('open');
     modalVideo.play().catch(() => {{}});
@@ -1034,7 +1034,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     modalVideo.pause();
     modalVideo.src = '';
     modalVideo.style.display = 'none';
-    modalImage.style.display = '';
+    modalImage.style.display = 'block';
     modalImage.src = src;
     modal.classList.add('open');
   }}
