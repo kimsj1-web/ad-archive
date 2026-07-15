@@ -1416,8 +1416,8 @@ def notify_slack_new_fires(daily_ads):
 
     lines = [f"🔥 *새 불씨 발견!* ({len(new_fires)}건)", ""]
     for a in new_fires:
-        lines.append(f"*[{a['grade']}]* {a['name']}")
-        lines.append(f"　일광고비 {a['peak_daily_spend']:,}원 · CPC {a['cpc']:,}원 · CVR {a['cvr']:.2f}%")
+        lines.append(f"*[{a['grade']}] {a['name']}*")
+        lines.append(f"　일광고비 {int(round(a['peak_daily_spend'])):,}원 · CPC {int(round(a['cpc'])):,}원 · CVR {a['cvr']:.2f}%")
     lines.append("")
     lines.append(f"👉 자세히 보기: {SITE_URL}")
     payload = {"text": "\n".join(lines)}
