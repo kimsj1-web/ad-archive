@@ -66,6 +66,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html archive.json images/
           if [ -f tabs_cache.json ]; then git add tabs_cache.json; fi
+          if [ -f fire_seen.json ]; then git add fire_seen.json; fi
           TAG="${{ github.event.inputs.month_tag }}"
           [ -z "$TAG" ] && TAG="자동갱신"
           git diff --staged --quiet || git commit -m "chore: [$TAG] 광고 아카이브 업데이트 $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M KST')"
