@@ -65,6 +65,8 @@ def get_daily_grade(peak_daily_spend):
 def get_daily_grade_color(grade):
     return {"SS": "#BF5AF2", "S": "#FF4B4B", "A": "#FF9500", "B": "#34C759"}.get(grade, "#8E8E93")
 
+DAILY_GRADE_RANK = {"SS": 0, "S": 1, "A": 2, "B": 3}  # 정렬용 (낮을수록 상위 등급)
+
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
 RATE_LIMIT_CODES    = {4, 17, 32, 613}          # 앱/유저/페이지 레이트 리밋
 RATE_LIMIT_SUBCODES = {2446079, 1487742, 1015}  # "User request limit reached" 등
@@ -353,6 +355,10 @@ def collect_daily_spikes(date_start, date_stop):
     2단계: ① 지출 있었던 광고 목록만 가볍게 조회 → ② F_I만 광고별 일자 조회."""
     print(f"🔥 일광고비 스캔: {date_start} ~ {date_stop} (F_I 이미지·릴스 / 최근 7일)")
 
+    # 불씨 최초 발굴일 기록 로드 + 오늘(KST) 날짜
+    fire_seen = load_fire_seen()
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
+
     # ── 1) 지출 있었던 광고 목록 (가벼운 호출) ──
     try:
         active = fetch_account_active_ads(date_start, date_stop)
@@ -414,6 +420,13 @@ def collect_daily_spikes(date_start, date_stop):
             vid_filename = safe_filename(name, "daily", "mp4")
             local_video = download_media(media["video_url"], vid_filename)
 
+        # 최초 발굴일 기록 → 오늘 처음 잡혔으면 NEW
+        first_seen = fire_seen.get(name)
+        if not first_seen:
+            first_seen = today_kst
+            fire_seen[name] = today_kst
+        is_new = (first_seen == today_kst)
+
         results.append({
             "name":             name,
             "peak_daily_spend": peak_daily,
@@ -427,11 +440,16 @@ def collect_daily_spikes(date_start, date_stop):
             "is_video":         is_reels,
             "video_url":        local_video if local_video else media.get("video_url", ""),
             "video_permalink":  media.get("video_permalink", ""),
+            "first_seen":       first_seen,
+            "is_new":           is_new,
         })
 
-    # 일 최고 지출 큰 순으로 정렬
-    results.sort(key=lambda x: -x["peak_daily_spend"])
-    print(f"  → 이번주 불씨 {len(results)}개")
+    save_fire_seen(fire_seen)
+
+    # 정렬: ① 오늘 새로 발굴(NEW) 먼저, ② 등급 높은 순, ③ 일 최고 지출 큰 순
+    results.sort(key=lambda x: (not x["is_new"], DAILY_GRADE_RANK.get(x["grade"], 9), -x["peak_daily_spend"]))
+    new_cnt = sum(1 for r in results if r["is_new"])
+    print(f"  → 이번주 불씨 {len(results)}개 (오늘 NEW {new_cnt}개)")
     return results
 
 # ── 순위(월별/주별) 집계 ──────────────────────────────────────────────────────
@@ -582,6 +600,25 @@ def save_tabs_cache(daily_ads, d_start, d_stop, rankings):
     except Exception as e:
         print(f"  ⚠️  탭 캐시 저장 실패: {e}")
 
+# 불씨 최초 발굴일 기록 (광고명 → 처음 불씨로 잡힌 날짜). 오늘 처음이면 NEW! 배지.
+FIRE_SEEN_FILE = "fire_seen.json"
+
+def load_fire_seen():
+    if os.path.exists(FIRE_SEEN_FILE):
+        try:
+            with open(FIRE_SEEN_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_fire_seen(seen):
+    try:
+        with open(FIRE_SEEN_FILE, "w", encoding="utf-8") as f:
+            json.dump(seen, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"  ⚠️  불씨 발굴이력 저장 실패: {e}")
+
 # ── 병합 (같은 광고명은 최신 수집값으로 교체 = upsert) ───────────────────────
 def merge_archive(existing, new_results, period_label):
     """같은 광고명을 다시 수집하면 합산하지 않고 '최신 값으로 교체'한다.
@@ -710,12 +747,14 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
             card_classes += " has-permalink"
 
         product = get_product(ad["name"])
+        new_badge = '<span class="new-badge">NEW!</span>' if ad.get("is_new") else ''
         daily_cards_html += f"""
         <div class="{card_classes}" data-grade="{ad['grade']}" data-product="{product}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
                 <span class="grade-badge" style="background:{gcolor}">{ad['grade']}</span>
+                {new_badge}
             </div>
             <div class="card-body">
                 <p class="ad-name">{ad['name']}</p>
@@ -764,6 +803,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .card-img img {{ width:100%; height:auto; display:block; object-fit:contain; }}
   .no-img {{ width:100%; height:200px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px; }}
   .grade-badge {{ position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }}
+  .new-badge {{ position:absolute; top:10px; right:54px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:800; color:#fff; background:#FF2D55; box-shadow:0 2px 6px rgba(255,45,85,.5); letter-spacing:.3px; }}
   .play-icon {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:54px; height:54px; border-radius:50%; background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.9); color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; padding-left:4px; pointer-events:none; transition:background .15s; }}
   .card.has-video {{ cursor:pointer; }}
   .card.has-video:hover .play-icon {{ background:rgba(0,0,0,.8); }}
