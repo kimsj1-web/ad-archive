@@ -51,6 +51,7 @@ jobs:
         env:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           MONTH_TAG: ${{ github.event.inputs.month_tag }}
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
