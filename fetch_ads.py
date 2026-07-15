@@ -11,6 +11,8 @@ MONTH_TAG     = os.environ.get("MONTH_TAG", "")
 DATE_START    = os.environ.get("DATE_START", "")
 DATE_STOP     = os.environ.get("DATE_STOP", "")
 MEDIA_MODE    = os.environ.get("MEDIA_MODE", "all")  # image / video / all
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")  # 새 불씨 슬랙 알림 (없으면 알림 생략)
+SITE_URL      = "https://kimsj1-web.github.io/ad-archive/"
 
 API_VERSION  = "v19.0"
 BASE_URL     = f"https://graph.facebook.com/{API_VERSION}"
@@ -1400,6 +1402,35 @@ def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, 
             print(f"  ⚠️  [{month_tag}] {category or media_tag} 수집 실패(건너뜀): {e}")
     return merged
 
+def notify_slack_new_fires(daily_ads):
+    """오늘 새로 발견된 불씨(is_new)가 있으면 슬랙으로 알림. 없으면 아무것도 안 보냄."""
+    if not SLACK_WEBHOOK_URL:
+        return
+    new_fires = [a for a in (daily_ads or []) if a.get("is_new")]
+    if not new_fires:
+        print("  ℹ️  새 불씨 없음 → 슬랙 알림 생략")
+        return
+
+    # 등급 높은 순 → 일 최고 지출 큰 순
+    new_fires.sort(key=lambda x: (DAILY_GRADE_RANK.get(x["grade"], 9), -x["peak_daily_spend"]))
+
+    lines = [f"🔥 *새 불씨 발견!* ({len(new_fires)}건)", ""]
+    for a in new_fires:
+        lines.append(f"*[{a['grade']}]* {a['name']}")
+        lines.append(f"　일광고비 {a['peak_daily_spend']:,}원 · CPC {a['cpc']:,}원 · CVR {a['cvr']:.2f}%")
+    lines.append("")
+    lines.append(f"👉 자세히 보기: {SITE_URL}")
+    payload = {"text": "\n".join(lines)}
+
+    try:
+        r = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=15)
+        if r.status_code == 200:
+            print(f"  📨 슬랙 알림 전송: 새 불씨 {len(new_fires)}건")
+        else:
+            print(f"  ⚠️  슬랙 알림 실패: HTTP {r.status_code} {r.text[:120]}")
+    except Exception as e:
+        print(f"  ⚠️  슬랙 알림 오류: {e}")
+
 def main():
     existing = load_archive()
     print(f"기존 아카이브 {len(existing)}개")
@@ -1465,6 +1496,8 @@ def main():
         except Exception as e:
             print(f"  ⚠️  일광고비 단계 오류(건너뜀): {e}")
             daily_ads = []
+        # 오늘 새로 발견된 불씨가 있으면 슬랙 알림 (정기 실행에서만)
+        notify_slack_new_fires(daily_ads)
         try:
             rankings = collect_rankings()
         except Exception as e:
