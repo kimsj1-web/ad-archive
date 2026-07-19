@@ -444,13 +444,13 @@
     "media_type": "image",
     "grade_type": "image",
     "category": "image",
-    "total_spend": 5929193.0,
-    "daily_spend": 282342.5238095238,
-    "active_days": 21,
-    "cpc": 447.6213951381549,
-    "conversions": 961.0,
-    "cost_per_conversion": 6169.81581685744,
-    "conversion_rate": 7.628194951579616,
+    "total_spend": 5992539.0,
+    "daily_spend": 272388.13636363635,
+    "active_days": 22,
+    "cpc": 439.59352992957747,
+    "conversions": 991.0,
+    "cost_per_conversion": 6046.961654894047,
+    "conversion_rate": 7.638942418869961,
     "image_url": "images/[26.06]F_I_JD멜_전환_쫀득바출시_직원설득형__.배너_고효율.가격실수안내.__문선정_260625_빙과_오형선_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
@@ -640,6 +640,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_JD멜_전환_쫀득바출시__직원설득형__.배너_공지문.현장감.대세감.슈기.가격실수.__김유진_260713_빙과_홍정민",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 4791007.0,
+    "daily_spend": 798501.1666666666,
+    "active_days": 6,
+    "cpc": 283.10624593748156,
+    "conversions": 1315.0,
+    "cost_per_conversion": 3643.351330798479,
+    "conversion_rate": 8.122297714638666,
+    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시__직원설득형__.배너_공지문.현장감.대세감.슈기.가격실수.__김유진_260713_빙과_홍정민_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "A급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.06]F_I_PC혼_전환_제과7일특가_혜택강조형__.배너_개당10원.AI활용.다시는없어요.__박현지_260601_제과_김수정",
     "media_type": "image",
     "grade_type": "image",
@@ -700,6 +720,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.5개.__손유곤_260708_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 4147950.0,
+    "daily_spend": 345662.5,
+    "active_days": 12,
+    "cpc": 321.74604405833077,
+    "conversions": 611.0,
+    "cost_per_conversion": 6788.788870703765,
+    "conversion_rate": 5.037098103874691,
+    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.5개.__손유곤_260708_빙_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "A급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.03]F_I_WF초_전환_웨하스감사특가_혜택강조형_혜택.100_.배너_혜택O.다시는없습니다_확장_이선민_260306_2셀_최아연",
     "media_type": "image",
     "grade_type": "image",
@@ -757,46 +797,6 @@
     "grade": "A급",
     "periods": [
       "26.01"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.5개.__손유곤_260708_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 3871291.0,
-    "daily_spend": 351935.54545454547,
-    "active_days": 11,
-    "cpc": 335.46715771230504,
-    "conversions": 555.0,
-    "cost_per_conversion": 6975.299099099099,
-    "conversion_rate": 5.105326096955202,
-    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.5개.__손유곤_260708_빙_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "A급",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_JD멜_전환_쫀득바출시__직원설득형__.배너_공지문.현장감.대세감.슈기.가격실수.__김유진_260713_빙과_홍정민",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 3727447.0,
-    "daily_spend": 745489.4,
-    "active_days": 5,
-    "cpc": 360.174606242149,
-    "conversions": 831.0,
-    "cost_per_conversion": 4485.495788206979,
-    "conversion_rate": 8.406676783004553,
-    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시__직원설득형__.배너_공지문.현장감.대세감.슈기.가격실수.__김유진_260713_빙과_홍정민_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "A급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -1124,13 +1124,13 @@
     "media_type": "image",
     "grade_type": "image",
     "category": "image",
-    "total_spend": 2771369.0,
-    "daily_spend": 163021.70588235295,
-    "active_days": 17,
-    "cpc": 565.4701081411956,
-    "conversions": 413.0,
-    "cost_per_conversion": 6710.336561743341,
-    "conversion_rate": 8.643784010046044,
+    "total_spend": 2801351.0,
+    "daily_spend": 155630.61111111112,
+    "active_days": 18,
+    "cpc": 563.8790257648953,
+    "conversions": 418.0,
+    "cost_per_conversion": 6701.796650717703,
+    "conversion_rate": 8.632796365138374,
     "image_url": "images/[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_페인포인트.타제품 비교.한달젤라또무제한.올여름시원하게.__손유곤_260630_빙_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
@@ -1157,6 +1157,26 @@
     "grade": "B급",
     "periods": [
       "26.01"
+    ]
+  },
+  {
+    "name": "[26.07]F_I_JD멜_전환_쫀득바출시_직원설득형__.배너_공지문.직원실수.대세감.원조제치고1등.맛먼저.__김유진_260707_빙과_오형선",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2678403.0,
+    "daily_spend": 206031.0,
+    "active_days": 13,
+    "cpc": 456.52002727117775,
+    "conversions": 395.0,
+    "cost_per_conversion": 6780.767088607595,
+    "conversion_rate": 7.027219355986479,
+    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_직원설득형__.배너_공지문.직원실수.대세감.원조제치고1등.맛먼저.__김유진_260707_빙과_오형선_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
     ]
   },
   {
@@ -1197,26 +1217,6 @@
     "grade": "B급",
     "periods": [
       "26.06"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_JD멜_전환_쫀득바출시_직원설득형__.배너_공지문.직원실수.대세감.원조제치고1등.맛먼저.__김유진_260707_빙과_오형선",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2651812.0,
-    "daily_spend": 220984.33333333334,
-    "active_days": 12,
-    "cpc": 466.04780316344466,
-    "conversions": 384.0,
-    "cost_per_conversion": 6905.760416666667,
-    "conversion_rate": 7.041995231982395,
-    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_직원설득형__.배너_공지문.직원실수.대세감.원조제치고1등.맛먼저.__김유진_260707_빙과_오형선_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -1300,6 +1300,46 @@
     ]
   },
   {
+    "name": "[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_이제다시는없습니다.1년중단한번.제주말차.__손유곤_260703_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2546891.0,
+    "daily_spend": 149817.11764705883,
+    "active_days": 17,
+    "cpc": 658.6219291440393,
+    "conversions": 401.0,
+    "cost_per_conversion": 6351.349127182045,
+    "conversion_rate": 10.805712745890595,
+    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_이제다시는없습니다.1년중단한번.제주말차.__손유곤_260703_빙과_김민우_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
+    "name": "[26.06]F_I_P애_전환_상시_혜택강조형__.배너_.대세감.딱100원.다시는없습니다.__박지연_260623_빙과_홍정민",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2533855.0,
+    "daily_spend": 140769.72222222222,
+    "active_days": 18,
+    "cpc": 481.17261678693507,
+    "conversions": 412.0,
+    "cost_per_conversion": 6150.133495145631,
+    "conversion_rate": 8.121427163414154,
+    "image_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.배너_.대세감.딱100원.다시는없습니다.__박지연_260623_빙과_홍정민_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.06"
+    ]
+  },
+  {
     "name": "[26.01]F_I_PC닭_전환_닭강정팝콘출시_혜택강조형_기존고효율_.배너_혜택O.신규.혜택형.비밀링크.검색해도안나와요_KR1_오형선_260102_콘텐츠1_오형선",
     "media_type": "image",
     "grade_type": "image",
@@ -1317,26 +1357,6 @@
     "grade": "B급",
     "periods": [
       "26.01"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_이제다시는없습니다.1년중단한번.제주말차.__손유곤_260703_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2499606.0,
-    "daily_spend": 156225.375,
-    "active_days": 16,
-    "cpc": 666.0287769784172,
-    "conversions": 389.0,
-    "cost_per_conversion": 6425.72236503856,
-    "conversion_rate": 10.793562708102108,
-    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_직원설득형__.배너_이제다시는없습니다.1년중단한번.제주말차.__손유곤_260703_빙과_김민우_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -1400,6 +1420,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_P말_전환_상시_혜택강조형__.배너_맛메세지테스트.원재료희소성극대화.4분할.1년중단한번첫물말차.__손유곤_260703_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2446569.0,
+    "daily_spend": 143915.82352941178,
+    "active_days": 17,
+    "cpc": 716.628295254833,
+    "conversions": 391.0,
+    "cost_per_conversion": 6257.209718670077,
+    "conversion_rate": 12.012288786482335,
+    "image_url": "images/[26.07]F_I_P말_전환_상시_혜택강조형__.배너_맛메세지테스트.원재료희소성극대화.4분할.1년중단한번첫물말차.__손유곤_260703_빙과__thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.06]F_I_P혼_전환_상시_혜택강조형__.배너_고효율.이제다시는없습니다.__손유곤_260626_빙과_김민우",
     "media_type": "image",
     "grade_type": "image",
@@ -1420,26 +1460,6 @@
     ]
   },
   {
-    "name": "[26.07]F_I_P말_전환_상시_혜택강조형__.배너_맛메세지테스트.원재료희소성극대화.4분할.1년중단한번첫물말차.__손유곤_260703_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2423844.0,
-    "daily_spend": 151490.25,
-    "active_days": 16,
-    "cpc": 720.953004164188,
-    "conversions": 387.0,
-    "cost_per_conversion": 6263.162790697675,
-    "conversion_rate": 12.071116656269494,
-    "image_url": "images/[26.07]F_I_P말_전환_상시_혜택강조형__.배너_맛메세지테스트.원재료희소성극대화.4분할.1년중단한번첫물말차.__손유곤_260703_빙과__thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
     "name": "[26.06]F_I_P혼_전환_파인트990원_직원설득형__.배너_판매중단위기.대세감.수량제한.여름한정판매.최대5개990원.__박지연_260604_빙과_김민우",
     "media_type": "image",
     "grade_type": "image",
@@ -1454,6 +1474,26 @@
     "image_url": "images/[26.06]F_I_P혼_전환_파인트990원_직원설득형__.배너_판매중단위기.대세감.수량제한.여름한정판매.최대5개990원.__박지연_260604_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.06"
+    ]
+  },
+  {
+    "name": "[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선",
+    "media_type": "video",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2404454.0,
+    "daily_spend": 114497.80952380953,
+    "active_days": 21,
+    "cpc": 1031.9545064377683,
+    "conversions": 333.0,
+    "cost_per_conversion": 7220.582582582582,
+    "conversion_rate": 16.12590799031477,
+    "image_url": "images/[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선_thumb.jpg",
+    "video_url": "images/[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1505902667952732/?idorvanity=23843184707090658",
     "grade": "B급",
     "periods": [
       "26.06"
@@ -1500,26 +1540,6 @@
     ]
   },
   {
-    "name": "[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선",
-    "media_type": "video",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2378461.0,
-    "daily_spend": 118923.05,
-    "active_days": 20,
-    "cpc": 1037.7229493891798,
-    "conversions": 331.0,
-    "cost_per_conversion": 7185.682779456193,
-    "conversion_rate": 16.321499013806708,
-    "image_url": "images/[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선_thumb.jpg",
-    "video_url": "images/[26.06]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득강조.희소성.특가.곧끝나요.__문선정_260625_빙과_오형선_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1505902667952732/?idorvanity=23843184707090658",
-    "grade": "B급",
-    "periods": [
-      "26.06"
-    ]
-  },
-  {
     "name": "[26.02]F_I_WF초_전환_웨하스출시_제품강조형_제품력.50_.배너_대세감.직원형정보글.가격조정.포스터.초코원료_확장_이선민_260224_웨하스셀_윤검주",
     "media_type": "image",
     "grade_type": "image",
@@ -1548,9 +1568,9 @@
     "daily_spend": 111841.85,
     "active_days": 20,
     "cpc": 1382.4703337453645,
-    "conversions": 312.0,
-    "cost_per_conversion": 7169.349358974359,
-    "conversion_rate": 21.238938053097346,
+    "conversions": 314.0,
+    "cost_per_conversion": 7123.6847133757965,
+    "conversion_rate": 21.37508509189925,
     "image_url": "images/[26.06]F_I_JD망_전환_쫀득바출시_혜택강조형__.배너_.품절대란.국내최초망고젤리아이스크림.__김유진_260622_빙과_홍정민_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
@@ -1577,26 +1597,6 @@
     "grade": "B급",
     "periods": [
       "26.01"
-    ]
-  },
-  {
-    "name": "[26.06]F_I_P애_전환_상시_혜택강조형__.배너_.대세감.딱100원.다시는없습니다.__박지연_260623_빙과_홍정민",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2214061.0,
-    "daily_spend": 130238.88235294117,
-    "active_days": 17,
-    "cpc": 503.31007047056147,
-    "conversions": 345.0,
-    "cost_per_conversion": 6417.568115942029,
-    "conversion_rate": 8.140632373761209,
-    "image_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.배너_.대세감.딱100원.다시는없습니다.__박지연_260623_빙과_홍정민_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.06"
     ]
   },
   {
@@ -1640,6 +1640,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_P말_전환_상시_직원설득형__.배너_원재료강조.수급.텍스트소구.구매제한.공지문.현장감.표.제한적인특성상.종료.__손유곤_260709_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2191091.0,
+    "daily_spend": 219109.1,
+    "active_days": 10,
+    "cpc": 538.4839026787909,
+    "conversions": 362.0,
+    "cost_per_conversion": 6052.737569060773,
+    "conversion_rate": 9.431995831162064,
+    "image_url": "images/[26.07]F_I_P말_전환_상시_직원설득형__.배너_원재료강조.수급.텍스트소구.구매제한.공지문.현장감.표.제한적인특성상.종료.__손유곤_26_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.02]F_I_PC카_전환_상시_제품강조형_제품력.50_.배너_대세감.소비자형정보글.인스스.공구인플루언서_핵심_오형선_260204_콘텐츠1_오형선",
     "media_type": "image",
     "grade_type": "image",
@@ -1657,26 +1677,6 @@
     "grade": "B급",
     "periods": [
       "26.02"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_P말_전환_상시_직원설득형__.배너_원재료강조.수급.텍스트소구.구매제한.공지문.현장감.표.제한적인특성상.종료.__손유곤_260709_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 2165966.0,
-    "daily_spend": 240662.88888888888,
-    "active_days": 9,
-    "cpc": 547.3757897397018,
-    "conversions": 354.0,
-    "cost_per_conversion": 6118.54802259887,
-    "conversion_rate": 9.46018172100481,
-    "image_url": "images/[26.07]F_I_P말_전환_상시_직원설득형__.배너_원재료강조.수급.텍스트소구.구매제한.공지문.현장감.표.제한적인특성상.종료.__손유곤_26_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -1760,6 +1760,26 @@
     ]
   },
   {
+    "name": "[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_빙과_김민우",
+    "media_type": "video",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 2005845.0,
+    "daily_spend": 91174.77272727272,
+    "active_days": 22,
+    "cpc": 979.8949682462139,
+    "conversions": 292.0,
+    "cost_per_conversion": 6869.332191780822,
+    "conversion_rate": 15.835140997830802,
+    "image_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_thumb.jpg",
+    "video_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1344597207620674/?idorvanity=23843184707090658",
+    "grade": "B급",
+    "periods": [
+      "26.06"
+    ]
+  },
+  {
     "name": "[26.03]F_I_MK아_전환_아몬드스윗팝콘증정_혜택강조형_혜택.100_.배너_혜택O.오늘까지.정가할인.네고_확장_윤영은_260313_신규셀_박지현",
     "media_type": "image",
     "grade_type": "image",
@@ -1780,23 +1800,23 @@
     ]
   },
   {
-    "name": "[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_빙과_김민우",
-    "media_type": "video",
+    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛.아사이볼에서갈아탄.단면강조.4분할.__고가영_260707_빙과_오형선",
+    "media_type": "image",
     "grade_type": "image",
     "category": "image",
-    "total_spend": 1989701.0,
-    "daily_spend": 94747.66666666667,
-    "active_days": 21,
-    "cpc": 982.0834155972359,
-    "conversions": 291.0,
-    "cost_per_conversion": 6837.460481099656,
-    "conversion_rate": 15.953947368421053,
-    "image_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_thumb.jpg",
-    "video_url": "images/[26.06]F_I_P애_전환_상시_혜택강조형__.릴스_맛비주얼영상.지금아니면못봐요.더블비얀코맛.애플셔벗그자체.딱100원.__손유곤_260625_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1344597207620674/?idorvanity=23843184707090658",
+    "total_spend": 1988195.0,
+    "daily_spend": 152938.07692307694,
+    "active_days": 13,
+    "cpc": 1087.0393657736468,
+    "conversions": 294.0,
+    "cost_per_conversion": 6762.568027210885,
+    "conversion_rate": 17.172897196261683,
+    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛.아사이볼에서갈아탄.단면강조.4분할.__고가영_260707_빙과_오형선_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
     "grade": "B급",
     "periods": [
-      "26.06"
+      "26.07"
     ]
   },
   {
@@ -1837,26 +1857,6 @@
     "grade": "B급",
     "periods": [
       "26.01"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛.아사이볼에서갈아탄.단면강조.4분할.__고가영_260707_빙과_오형선",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1918139.0,
-    "daily_spend": 159844.91666666666,
-    "active_days": 12,
-    "cpc": 1125.008211143695,
-    "conversions": 278.0,
-    "cost_per_conversion": 6899.780575539568,
-    "conversion_rate": 17.429467084639498,
-    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛.아사이볼에서갈아탄.단면강조.4분할.__고가영_260707_빙과_오형선_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -2100,6 +2100,26 @@
     ]
   },
   {
+    "name": "[26.06]F_I_혼합_전환_쫀득바출시_혜택강조형__.배너_리얼쫀득바2종.직원실수.사과문.__김유진_260630_빙과_홍정민",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1696489.0,
+    "daily_spend": 106030.5625,
+    "active_days": 16,
+    "cpc": 884.9707876890975,
+    "conversions": 225.0,
+    "cost_per_conversion": 7539.9511111111115,
+    "conversion_rate": 12.281659388646288,
+    "image_url": "images/[26.06]F_I_혼합_전환_쫀득바출시_혜택강조형__.배너_리얼쫀득바2종.직원실수.사과문.__김유진_260630_빙과_홍정민_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.06"
+    ]
+  },
+  {
     "name": "[26.03]F_I_WF초_전환_웨하스감사특가_혜택강조형_혜택.100_.배너_혜택O.네고형.비교프레임.2분할.영수증_확장_이선민_260313_2셀_최아연",
     "media_type": "image",
     "grade_type": "image",
@@ -2172,26 +2192,6 @@
     "cost_per_conversion": 9287.6408839779,
     "conversion_rate": 4.5523138832997985,
     "image_url": "images/[26.06]F_I_P혼_전환_파인트990원_혜택강조형__.배너_안내문.혜택종료.990원증정종료안내.__박지연_260609_빙과_홍정민_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.06"
-    ]
-  },
-  {
-    "name": "[26.06]F_I_혼합_전환_쫀득바출시_혜택강조형__.배너_리얼쫀득바2종.직원실수.사과문.__김유진_260630_빙과_홍정민",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1669721.0,
-    "daily_spend": 111314.73333333334,
-    "active_days": 15,
-    "cpc": 898.6657696447793,
-    "conversions": 220.0,
-    "cost_per_conversion": 7589.640909090909,
-    "conversion_rate": 12.401352874859075,
-    "image_url": "images/[26.06]F_I_혼합_전환_쫀득바출시_혜택강조형__.배너_리얼쫀득바2종.직원실수.사과문.__김유진_260630_빙과_홍정민_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
     "grade": "B급",
@@ -2540,6 +2540,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛강조.블루베리산딸기.__고가영_260703_빙과_오형선",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1422703.0,
+    "daily_spend": 83688.41176470589,
+    "active_days": 17,
+    "cpc": 787.3287216380742,
+    "conversions": 245.0,
+    "cost_per_conversion": 5806.9510204081635,
+    "conversion_rate": 14.202898550724639,
+    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛강조.블루베리산딸기.__고가영_260703_빙과_오형선_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "(운영X) [26.05]F_I_DB딸_전환_듬뿍바출시이벤트_혜택강조형_혜택.100_.배너_브팀기획.맛강조.연상.설빙생딸기빙수.마지막0원_확장_허재희_260514_1셀_오형선",
     "media_type": "image",
     "grade_type": "image",
@@ -2660,26 +2680,6 @@
     ]
   },
   {
-    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛강조.블루베리산딸기.__고가영_260703_빙과_오형선",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1353851.0,
-    "daily_spend": 84615.6875,
-    "active_days": 16,
-    "cpc": 805.3842950624628,
-    "conversions": 227.0,
-    "cost_per_conversion": 5964.101321585903,
-    "conversion_rate": 14.160948222083594,
-    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_매거진형__.배너_맛강조.블루베리산딸기.__고가영_260703_빙과_오형선_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
     "name": "[26.05]F_I_제혼_전환_제과100원_혜택강조형_혜택.100_.배너_혜택O.2025년.죄송합니다.부채꼴_확장_최나영_260507_2셀_최아연",
     "media_type": "image",
     "grade_type": "image",
@@ -2724,13 +2724,13 @@
     "media_type": "image",
     "grade_type": "image",
     "category": "image",
-    "total_spend": 1236223.0,
-    "daily_spend": 123622.3,
-    "active_days": 10,
-    "cpc": 985.8237639553429,
-    "conversions": 177.0,
-    "cost_per_conversion": 6984.310734463277,
-    "conversion_rate": 14.676616915422885,
+    "total_spend": 1271602.0,
+    "daily_spend": 115600.18181818182,
+    "active_days": 11,
+    "cpc": 946.1324404761905,
+    "conversions": 192.0,
+    "cost_per_conversion": 6622.927083333333,
+    "conversion_rate": 14.849187935034802,
     "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시__혜택강조형__.배너_슈기.특가종료.곧끝난대요.노을멜론.원조제치고1등.__김유진_260709_빙과_오_thumb.jpg",
     "video_url": "",
     "video_permalink": "",
@@ -2800,6 +2800,26 @@
     ]
   },
   {
+    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙과_오형선",
+    "media_type": "video",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1193072.0,
+    "daily_spend": 91774.76923076923,
+    "active_days": 13,
+    "cpc": 1410.2505910165485,
+    "conversions": 152.0,
+    "cost_per_conversion": 7849.1578947368425,
+    "conversion_rate": 19.19191919191919,
+    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙_thumb.jpg",
+    "video_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1540436131123264/?idorvanity=23843184707090658",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.05]F_I_혼합_전환_골라담기_혜택강조형_혜택.100_.배너_마팀기획.더위강조형.여름한정.올해최초얼리썸머골라담기_확장_황경원_260522_1셀_오형선",
     "media_type": "image",
     "grade_type": "image",
@@ -2817,6 +2837,26 @@
     "grade": "B급",
     "periods": [
       "26.05"
+    ]
+  },
+  {
+    "name": "[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선",
+    "media_type": "video",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1183756.0,
+    "daily_spend": 91058.15384615384,
+    "active_days": 13,
+    "cpc": 762.2382485511912,
+    "conversions": 196.0,
+    "cost_per_conversion": 6039.571428571428,
+    "conversion_rate": 13.198653198653199,
+    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선_thumb.jpg",
+    "video_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/963566406733409/?idorvanity=23843184707090658",
+    "grade": "B급",
+    "periods": [
+      "26.07"
     ]
   },
   {
@@ -2840,26 +2880,6 @@
     ]
   },
   {
-    "name": "[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙과_오형선",
-    "media_type": "video",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1162525.0,
-    "daily_spend": 96877.08333333333,
-    "active_days": 12,
-    "cpc": 1424.6629901960785,
-    "conversions": 147.0,
-    "cost_per_conversion": 7908.333333333333,
-    "conversion_rate": 19.240837696335078,
-    "image_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙_thumb.jpg",
-    "video_url": "images/[26.07]F_I_DB베_전환_듬뿍바출시이벤트_혜택강조형__.릴스_가격페인포인트.이득.아사이볼1번먹는값으로한달무제한.__고가영_260703_빙_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1540436131123264/?idorvanity=23843184707090658",
-    "grade": "B급",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
     "name": "[26.06]F_I_P오_전환_파인트990원_혜택강조형__.릴스_AI캐릭터.시간.눈깜빡하면다사라져요.__손유곤_260630_빙과_오형선",
     "media_type": "video",
     "grade_type": "image",
@@ -2877,26 +2897,6 @@
     "grade": "B급",
     "periods": [
       "26.06"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선",
-    "media_type": "video",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1156446.0,
-    "daily_spend": 96370.5,
-    "active_days": 12,
-    "cpc": 798.6505524861878,
-    "conversions": 187.0,
-    "cost_per_conversion": 6184.20320855615,
-    "conversion_rate": 13.540912382331644,
-    "image_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선_thumb.jpg",
-    "video_url": "images/[26.07]F_I_JD멜_전환_쫀득바출시_혜택강조형__.릴스_AI캐릭터.이득.가격희소성.판매자손해.울기.__문선정_260707_빙과_오형선_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/963566406733409/?idorvanity=23843184707090658",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -2937,6 +2937,46 @@
     "grade": "B급",
     "periods": [
       "26.05"
+    ]
+  },
+  {
+    "name": "[26.07]F_I_P말_전환_파인트990원_혜택강조형__.배너_원재료강조.수급.텍스트소구.다시는없습니다.구하기힘들다는.__손유곤_260707_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1134628.0,
+    "daily_spend": 94552.33333333333,
+    "active_days": 12,
+    "cpc": 790.1309192200557,
+    "conversions": 165.0,
+    "cost_per_conversion": 6876.533333333334,
+    "conversion_rate": 12.052593133674215,
+    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_혜택강조형__.배너_원재료강조.수급.텍스트소구.다시는없습니다.구하기힘들다는.__손유곤_260707__thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
+    "name": "[26.07]F_I_P말_전환_상시_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.3개.__손유곤_260708_빙과_김민우",
+    "media_type": "image",
+    "grade_type": "image",
+    "category": "image",
+    "total_spend": 1132660.0,
+    "daily_spend": 94388.33333333333,
+    "active_days": 12,
+    "cpc": 464.9671592775041,
+    "conversions": 169.0,
+    "cost_per_conversion": 6702.130177514793,
+    "conversion_rate": 7.514450867052023,
+    "image_url": "images/[26.07]F_I_P말_전환_상시_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.3개.__손유곤_260708_빙과_김민우_thumb.jpg",
+    "video_url": "",
+    "video_permalink": "",
+    "grade": "B급",
+    "periods": [
+      "26.07"
     ]
   },
   {
@@ -3037,46 +3077,6 @@
     "grade": "B급",
     "periods": [
       "26.06"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_P말_전환_상시_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.3개.__손유곤_260708_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1110831.0,
-    "daily_spend": 100984.63636363637,
-    "active_days": 11,
-    "cpc": 472.6940425531915,
-    "conversions": 161.0,
-    "cost_per_conversion": 6899.571428571428,
-    "conversion_rate": 7.415937356057116,
-    "image_url": "images/[26.07]F_I_P말_전환_상시_직원설득형__.배너_메세지테스트.안내문.구매제한.감사한마음.수량제한.3개.__손유곤_260708_빙과_김민우_thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
-    "name": "[26.07]F_I_P말_전환_파인트990원_혜택강조형__.배너_원재료강조.수급.텍스트소구.다시는없습니다.구하기힘들다는.__손유곤_260707_빙과_김민우",
-    "media_type": "image",
-    "grade_type": "image",
-    "category": "image",
-    "total_spend": 1109756.0,
-    "daily_spend": 100886.90909090909,
-    "active_days": 11,
-    "cpc": 801.8468208092486,
-    "conversions": 158.0,
-    "cost_per_conversion": 7023.772151898735,
-    "conversion_rate": 11.951588502269288,
-    "image_url": "images/[26.07]F_I_P말_전환_파인트990원_혜택강조형__.배너_원재료강조.수급.텍스트소구.다시는없습니다.구하기힘들다는.__손유곤_260707__thumb.jpg",
-    "video_url": "",
-    "video_permalink": "",
-    "grade": "B급",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -4024,13 +4024,13 @@
     "media_type": "video",
     "grade_type": "video",
     "category": "video",
-    "total_spend": 16775870.0,
-    "daily_spend": 1048491.875,
-    "active_days": 16,
-    "cpc": 566.5418256728918,
-    "conversions": 2698.0,
-    "cost_per_conversion": 6217.891030392883,
-    "conversion_rate": 10.731474483910745,
+    "total_spend": 16831829.0,
+    "daily_spend": 990107.5882352941,
+    "active_days": 17,
+    "cpc": 565.2627531316117,
+    "conversions": 2709.0,
+    "cost_per_conversion": 6213.299741602067,
+    "conversion_rate": 10.717676847602469,
     "image_url": "images/[26.07]F_V_P말_전환_말차재입고_네고형_CS전화네고형_var1.릴스_CS부장님.7월.수민PJ_1P_영상팀_260703_빙과_이수민_thumb.jpg",
     "video_url": "images/[26.07]F_V_P말_전환_말차재입고_네고형_CS전화네고형_var1.릴스_CS부장님.7월.수민PJ_1P_영상팀_260703_빙과_이수민_video.mp4",
     "video_permalink": "https://www.facebook.com/23843184707090658/videos/1060411579761156/?idorvanity=23843184707090658",
@@ -4044,13 +4044,13 @@
     "media_type": "video",
     "grade_type": "video",
     "category": "video",
-    "total_spend": 15976331.0,
-    "daily_spend": 998520.6875,
-    "active_days": 16,
-    "cpc": 615.6582273603083,
-    "conversions": 2882.0,
-    "cost_per_conversion": 5543.487508674531,
-    "conversion_rate": 12.173178458289335,
+    "total_spend": 16001127.0,
+    "daily_spend": 941242.7647058824,
+    "active_days": 17,
+    "cpc": 614.4826036866359,
+    "conversions": 2888.0,
+    "cost_per_conversion": 5540.556440443213,
+    "conversion_rate": 12.151302225775234,
     "image_url": "images/[26.07]F_V_P말_전환_말차재입고_원가강조형_미틀리에BP_var2.릴스_말차계에르메스.X_2P_손유곤_260703_빙과_노현경_thumb.jpg",
     "video_url": "images/[26.07]F_V_P말_전환_말차재입고_원가강조형_미틀리에BP_var2.릴스_말차계에르메스.X_2P_손유곤_260703_빙과_노현경_video.mp4",
     "video_permalink": "https://www.facebook.com/23843184707090658/videos/2319766048762575/?idorvanity=23843184707090658",
@@ -4540,6 +4540,26 @@
     ]
   },
   {
+    "name": "[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은",
+    "media_type": "video",
+    "grade_type": "video",
+    "category": "video",
+    "total_spend": 9479077.0,
+    "daily_spend": 394961.5416666667,
+    "active_days": 24,
+    "cpc": 717.3510670500984,
+    "conversions": 1792.0,
+    "cost_per_conversion": 5289.663504464285,
+    "conversion_rate": 14.45744251714401,
+    "image_url": "images/[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은_thumb.jpg",
+    "video_url": "images/[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/2170604943728511/?idorvanity=23843184707090658",
+    "grade": "불씨",
+    "periods": [
+      "26.06"
+    ]
+  },
+  {
     "name": "[26.03]F_V_WF초_전환_웨하스감사특가_네고형_전라도청년BP_var1.릴스_대립후킹.부페.03_00_이선민_260319_2T_강경연",
     "media_type": "video",
     "grade_type": "video",
@@ -4557,26 +4577,6 @@
     "grade": "불씨",
     "periods": [
       "26.03"
-    ]
-  },
-  {
-    "name": "[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은",
-    "media_type": "video",
-    "grade_type": "video",
-    "category": "video",
-    "total_spend": 9304095.0,
-    "daily_spend": 404525.8695652174,
-    "active_days": 23,
-    "cpc": 722.9850804258296,
-    "conversions": 1765.0,
-    "cost_per_conversion": 5271.441926345609,
-    "conversion_rate": 14.627879993369799,
-    "image_url": "images/[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은_thumb.jpg",
-    "video_url": "images/[26.06]F_V_PC콘_전환_팝콘더블특가_네고형_전화네고형.다이어트_main.릴스_메인.슬기.X_1P_최나영_260625_제과_피재은_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/2170604943728511/?idorvanity=23843184707090658",
-    "grade": "불씨",
-    "periods": [
-      "26.06"
     ]
   },
   {
@@ -5300,6 +5300,26 @@
     ]
   },
   {
+    "name": "[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민",
+    "media_type": "video",
+    "grade_type": "video",
+    "category": "video",
+    "total_spend": 5673573.0,
+    "daily_spend": 567357.3,
+    "active_days": 10,
+    "cpc": 743.7825117986366,
+    "conversions": 870.0,
+    "cost_per_conversion": 6521.348275862069,
+    "conversion_rate": 12.118679481821982,
+    "image_url": "images/[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민_thumb.jpg",
+    "video_url": "images/[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/2069325830359253/?idorvanity=23843184707090658",
+    "grade": "불씨",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.06]F_V_JD멜_전환_쫀득바출시_원가강조형_미틀리에BP_main.릴스_공통.X_2P_김유진_260605_빙과_조의진",
     "media_type": "video",
     "grade_type": "video",
@@ -5317,26 +5337,6 @@
     "grade": "불씨",
     "periods": [
       "26.06"
-    ]
-  },
-  {
-    "name": "[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민",
-    "media_type": "video",
-    "grade_type": "video",
-    "category": "video",
-    "total_spend": 5633360.0,
-    "daily_spend": 625928.8888888889,
-    "active_days": 9,
-    "cpc": 750.2144093754162,
-    "conversions": 847.0,
-    "cost_per_conversion": 6650.956316410862,
-    "conversion_rate": 11.97680995475113,
-    "image_url": "images/[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민_thumb.jpg",
-    "video_url": "images/[26.07]F_V_P말_전환_말차재입고_인플루언서형_인플루언서형_main.릴스_공통.7월.수민PJ_1P_영상팀_260710_빙과_이수민_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/2069325830359253/?idorvanity=23843184707090658",
-    "grade": "불씨",
-    "periods": [
-      "26.07"
     ]
   },
   {
@@ -5504,17 +5504,37 @@
     "media_type": "video",
     "grade_type": "video",
     "category": "video",
-    "total_spend": 4893516.0,
-    "daily_spend": 305844.75,
-    "active_days": 16,
-    "cpc": 527.8873786407767,
-    "conversions": 856.0,
-    "cost_per_conversion": 5716.72429906542,
-    "conversion_rate": 10.604558969276512,
+    "total_spend": 4909438.0,
+    "daily_spend": 288790.4705882353,
+    "active_days": 17,
+    "cpc": 526.0300010714668,
+    "conversions": 858.0,
+    "cost_per_conversion": 5721.955710955711,
+    "conversion_rate": 10.55350553505535,
     "image_url": "images/[26.07]F_V_P말_전환_말차재입고_원가강조형_미틀리에BP_var1.릴스_죄송합니다.X_2P_손유곤_260703_빙과_노현경_thumb.jpg",
     "video_url": "images/[26.07]F_V_P말_전환_말차재입고_원가강조형_미틀리에BP_var1.릴스_죄송합니다.X_2P_손유곤_260703_빙과_노현경_video.mp4",
     "video_permalink": "https://www.facebook.com/23843184707090658/videos/1044794747974632/?idorvanity=23843184707090658",
     "grade": "불씨",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
+    "name": "[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민",
+    "media_type": "video",
+    "grade_type": "쩜오건",
+    "category": "쩜오건",
+    "total_spend": 4887854.0,
+    "daily_spend": 977570.8,
+    "active_days": 5,
+    "cpc": 359.16334778455433,
+    "conversions": 1258.0,
+    "cost_per_conversion": 3885.41653418124,
+    "conversion_rate": 9.6140619029423,
+    "image_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민_thumb.jpg",
+    "video_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1601848358029354/?idorvanity=23843184707090658",
+    "grade": "쩜오건",
     "periods": [
       "26.07"
     ]
@@ -5780,6 +5800,26 @@
     ]
   },
   {
+    "name": "[26.07]F_V_JD멜_전환_쫀득바출시_신규BP_떡볶이BP_main.릴스_공통.X_2P_김유진_260703_빙과_조의진",
+    "media_type": "video",
+    "grade_type": "video",
+    "category": "video",
+    "total_spend": 4249613.0,
+    "daily_spend": 249977.23529411765,
+    "active_days": 17,
+    "cpc": 328.96833875212883,
+    "conversions": 1092.0,
+    "cost_per_conversion": 3891.5869963369964,
+    "conversion_rate": 9.099241729855844,
+    "image_url": "images/[26.07]F_V_JD멜_전환_쫀득바출시_신규BP_떡볶이BP_main.릴스_공통.X_2P_김유진_260703_빙과_조의진_thumb.jpg",
+    "video_url": "images/[26.07]F_V_JD멜_전환_쫀득바출시_신규BP_떡볶이BP_main.릴스_공통.X_2P_김유진_260703_빙과_조의진_video.mp4",
+    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1090418216985825/?idorvanity=23843184707090658",
+    "grade": "불씨",
+    "periods": [
+      "26.07"
+    ]
+  },
+  {
     "name": "[26.05]F_V_JD망_전환_쫀득바출시_네고형_네고형_var4.릴스_예예.2중식감.취식.재은PJ1_2C_김바다_260515_2T_피재은",
     "media_type": "video",
     "grade_type": "video",
@@ -5840,37 +5880,17 @@
     ]
   },
   {
-    "name": "[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민",
-    "media_type": "video",
-    "grade_type": "쩜오건",
-    "category": "쩜오건",
-    "total_spend": 3456776.0,
-    "daily_spend": 864194.0,
-    "active_days": 4,
-    "cpc": 363.79456956430226,
-    "conversions": 817.0,
-    "cost_per_conversion": 4231.059975520196,
-    "conversion_rate": 8.963247394404828,
-    "image_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민_thumb.jpg",
-    "video_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_맛조합맥주.KR1_var1.릴스_맛후킹.X_1P_김소희_260715_제과_문형민_video.mp4",
-    "video_permalink": "https://www.facebook.com/23843184707090658/videos/1601848358029354/?idorvanity=23843184707090658",
-    "grade": "쩜오건",
-    "periods": [
-      "26.07"
-    ]
-  },
-  {
     "name": "[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_리액션과장.KR1_var1.릴스_트러플하몽.맛후킹.X_1P_김소희_260715_제과_문형민",
     "media_type": "video",
     "grade_type": "쩜오건",
     "category": "쩜오건",
-    "total_spend": 2435872.0,
-    "daily_spend": 608968.0,
-    "active_days": 4,
-    "cpc": 466.28483920367535,
-    "conversions": 532.0,
-    "cost_per_conversion": 4578.706766917293,
-    "conversion_rate": 10.695617209489344,
+    "total_spend": 2607637.0,
+    "daily_spend": 521527.4,
+    "active_days": 5,
+    "cpc": 464.65377761938703,
+    "conversions": 588.0,
+    "cost_per_conversion": 4434.756802721088,
+    "conversion_rate": 11.009174311926607,
     "image_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_리액션과장.KR1_var1.릴스_트러플하몽.맛후킹.X_1P_김소희_260715_제과_문형민_thumb.jpg",
     "video_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_리액션과장.KR1_var1.릴스_트러플하몽.맛후킹.X_1P_김소희_260715_제과_문형민_video.mp4",
     "video_permalink": "https://www.facebook.com/23843184707090658/videos/1554216032967719/?idorvanity=23843184707090658",
@@ -6004,13 +6024,13 @@
     "media_type": "video",
     "grade_type": "쩜오건",
     "category": "쩜오건",
-    "total_spend": 739240.0,
-    "daily_spend": 184810.0,
-    "active_days": 4,
-    "cpc": 420.26151222285387,
-    "conversions": 202.0,
-    "cost_per_conversion": 3659.6039603960394,
-    "conversion_rate": 12.038140643623361,
+    "total_spend": 783608.0,
+    "daily_spend": 156721.6,
+    "active_days": 5,
+    "cpc": 420.3905579399142,
+    "conversions": 219.0,
+    "cost_per_conversion": 3578.1187214611873,
+    "conversion_rate": 12.400906002265005,
     "image_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_리액션과장.KR1_var5.릴스_출시.맛후킹.X_1P_김소희_260715_제과_문형민_thumb.jpg",
     "video_url": "images/[26.07]F_V_BT깡_전환_블트깡출시_쩜오건_리액션과장.KR1_var5.릴스_출시.맛후킹.X_1P_김소희_260715_제과_문형민_video.mp4",
     "video_permalink": "https://www.facebook.com/23843184707090658/videos/1320187376950739/?idorvanity=23843184707090658",
