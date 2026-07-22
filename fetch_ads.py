@@ -69,6 +69,24 @@ def get_daily_grade_color(grade):
 
 DAILY_GRADE_RANK = {"SS": 0, "S": 1, "A": 2, "B": 3}  # 정렬용 (낮을수록 상위 등급)
 
+def month_index(tag):
+    """'YY.MM' → 정수 월 인덱스 (비교용)."""
+    yy, mm = tag.split(".")
+    return (2000 + int(yy)) * 12 + (int(mm) - 1)
+
+# F_V 영상 보관 정책: 월 태그가 이 개월수 이상 지나면 로컬 영상 대신 메타 링크로 연결
+VIDEO_LOCAL_MONTHS = 6
+
+def is_old_month(month_tag):
+    """월 태그가 현재(KST) 기준 6개월 이상 지났으면 True (→ 오래된 영상: 메타 링크)."""
+    try:
+        KST = timezone(timedelta(hours=9))
+        now = datetime.now(KST)
+        cur = now.year * 12 + (now.month - 1)
+        return (cur - month_index(month_tag)) >= VIDEO_LOCAL_MONTHS
+    except Exception:
+        return False
+
 # ── API 헬퍼 ─────────────────────────────────────────────────────────────────
 RATE_LIMIT_CODES    = {4, 17, 32, 613}          # 앱/유저/페이지 레이트 리밋
 RATE_LIMIT_SUBCODES = {2446079, 1487742, 1015}  # "User request limit reached" 등
@@ -681,11 +699,18 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
         else:
             img_tag = '<div class="no-img">미리보기 없음</div>'
 
-        # 영상이면 재생 오버레이 추가 (다운로드 영상 → 모달, 없으면 메타 페이지로)
+        # 영상이면 재생 오버레이 추가.
+        # 6개월 초과 F_V는 로컬 영상이 있어도 메타 링크로 연결(용량 절약), 링크 없으면 로컬 재생으로 폴백
         play_overlay = ""
         card_click_attr = ""
         card_classes = "card"
-        if is_video and video:
+        periods = ad.get("periods", [])
+        old_video = is_video and periods and is_old_month(max(periods, key=month_index))
+        if is_video and old_video and video_permalink:
+            play_overlay = '<div class="play-icon">▶</div>'
+            card_click_attr = f' data-permalink="{video_permalink}"'
+            card_classes += " has-permalink"
+        elif is_video and video:
             play_overlay = '<div class="play-icon">▶</div>'
             card_click_attr = f' data-video="{video}"'
             card_classes += " has-video"
@@ -1326,10 +1351,13 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
         local_img = download_media(media["image_url"], img_filename)
 
         local_video = ""
-        if actual_type == "video" and media["video_url"]:
+        old_month = is_old_month(month_tag)
+        if actual_type == "video" and media["video_url"] and not old_month:
             vid_filename = safe_filename(ad_name, "video", "mp4")
             # 영상은 용량이 커서 이미 받은 파일이 있으면 재다운로드 생략 (매일 갱신 대비)
             local_video = download_media(media["video_url"], vid_filename, skip_if_exists=True)
+        # 6개월 초과 F_V는 로컬 영상 대신 메타 링크로 연결 (용량 절약) → video_url 비움
+        stored_video = "" if (actual_type == "video" and old_month) else (local_video if local_video else media["video_url"])
 
         new_results.append({
             "name":                ad_name,
@@ -1344,7 +1372,7 @@ def collect_media(month_tag, date_start, date_stop, media_tag, media_type, categ
             "cost_per_conversion": cost_per_conv,
             "conversion_rate":     conversion_rate,
             "image_url":           local_img if local_img else media["image_url"],
-            "video_url":           local_video if local_video else media["video_url"],
+            "video_url":           stored_video,
             "video_permalink":     media.get("video_permalink", ""),
             "grade":               grade,
         })
@@ -1431,6 +1459,35 @@ def notify_slack_new_fires(daily_ads):
     except Exception as e:
         print(f"  ⚠️  슬랙 알림 오류: {e}")
 
+def cleanup_old_videos(merged):
+    """월 태그 6개월 초과 F_V 아카이브 영상(.mp4) 파일을 디스크에서 삭제(용량 절약).
+    표시는 이미 메타 링크로 전환되므로, 로컬 파일과 기록의 video_url을 정리한다.
+    삭제 대상: media_type=video 이면서 가장 최근 월 태그가 6개월 초과인 아카이브 광고."""
+    removed, freed = 0, 0
+    for ad in merged:
+        if ad.get("media_type") != "video":
+            continue
+        periods = ad.get("periods", [])
+        if not periods or not is_old_month(max(periods, key=month_index)):
+            continue
+        fpath = os.path.join(IMAGES_DIR, safe_filename(ad["name"], "video", "mp4"))
+        if os.path.exists(fpath):
+            try:
+                freed += os.path.getsize(fpath)
+                os.remove(fpath)
+                removed += 1
+            except Exception as e:
+                print(f"  ⚠️  영상 삭제 실패: {fpath} — {e}")
+                continue
+        # 파일이 없더라도(이미 삭제됐거나 미다운로드) 로컬 참조는 비워 메타 링크로 고정
+        if ad.get("video_url"):
+            ad["video_url"] = ""
+    if removed:
+        print(f"  🗑️  오래된 F_V 영상 {removed}개 삭제 (약 {freed/1024/1024:.1f}MB 정리)")
+    else:
+        print("  ℹ️  삭제할 오래된 F_V 영상 없음")
+    return merged
+
 def main():
     existing = load_archive()
     print(f"기존 아카이브 {len(existing)}개")
@@ -1474,6 +1531,13 @@ def main():
     except Exception as e:
         print(f"  ⚠️  아카이브 단계 오류(기존 데이터 유지하고 계속): {e}")
         save_archive(merged)
+
+    # ── 1-b) 오래된 F_V 영상 파일 정리 (6개월 초과 → 삭제, 표시는 메타 링크) ──
+    try:
+        merged = cleanup_old_videos(merged)
+        save_archive(merged)
+    except Exception as e:
+        print(f"  ⚠️  영상 정리 단계 오류(건너뜀): {e}")
 
     # ── 2) 일광고비·순위 ──
     today = datetime.today()
