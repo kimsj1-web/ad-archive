@@ -696,9 +696,9 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     updated = datetime.now(KST).strftime("%Y-%m-%d %H:%M (KST)")
     all_periods = sorted({p for ad in ads_data for p in ad.get("periods", [])})
     periods_str = " · ".join(all_periods) if all_periods else "전체"
-    # 기간 필터 버튼 (최신 월부터)
-    period_buttons = "".join(
-        f'<button class="filter-btn period-btn" data-period="{p}">{p}</button>'
+    # 기간 필터 드롭다운 옵션 (전체 + 최신 월부터)
+    period_options = '<option value="all">전체</option>' + "".join(
+        f'<option value="{p}">{p}</option>'
         for p in sorted(all_periods, key=month_index, reverse=True)
     )
 
@@ -850,6 +850,9 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .filter-btn:hover {{ border-color:#555; color:var(--text); }}
   .filter-btn.active {{ background:var(--text); color:var(--bg); border-color:var(--text); font-weight:600; }}
   .divider {{ width:1px; height:20px; background:var(--border); margin:0 4px; }}
+  .period-select {{ padding:6px 30px 6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238A8A9A' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>") no-repeat right 12px center; color:var(--text); font-size:13px; font-family:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }}
+  .period-select:hover {{ border-color:#555; }}
+  .period-select:focus {{ outline:none; border-color:var(--text); }}
   .count {{ margin-left:auto; font-size:13px; color:var(--muted); }}
   .product-filters {{ padding:10px 32px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
   .gallery {{ padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }}
@@ -1043,8 +1046,9 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   <button class="filter-btn product-btn" data-product="제과">제과</button>
   <div class="divider"></div>
   <span class="filter-label">기간</span>
-  <button class="filter-btn period-btn active" data-period="all">전체</button>
-  {period_buttons}
+  <select class="period-select" id="periodSelect">
+    {period_options}
+  </select>
 </div>
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(총 광고비 100만원 이상)을 충족하는 광고가 없습니다.</div>'}
@@ -1135,13 +1139,10 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     }});
   }});
 
-  document.querySelectorAll('.period-btn').forEach(btn => {{
-    btn.addEventListener('click', () => {{
-      document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      activePeriod = btn.dataset.period;
-      applyFilters();
-    }});
+  const periodSelect = document.getElementById('periodSelect');
+  if (periodSelect) periodSelect.addEventListener('change', () => {{
+    activePeriod = periodSelect.value;
+    applyFilters();
   }});
 
   // ── 영상·이미지 모달 ──
