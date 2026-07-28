@@ -11,7 +11,8 @@ MONTH_TAG     = os.environ.get("MONTH_TAG", "")
 DATE_START    = os.environ.get("DATE_START", "")
 DATE_STOP     = os.environ.get("DATE_STOP", "")
 MEDIA_MODE    = os.environ.get("MEDIA_MODE", "all")  # image / video / all
-SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")  # 새 불씨 슬랙 알림 (없으면 알림 생략)
+SLACK_BOT_TOKEN  = os.environ.get("SLACK_BOT_TOKEN", "")   # 새 불씨 슬랙 알림 (Bot Token, 없으면 알림 생략)
+SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "")  # 알림 보낼 채널 ID
 SITE_URL      = "https://kimsj1-web.github.io/ad-archive/"
 
 API_VERSION  = "v19.0"
@@ -1518,9 +1519,32 @@ def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, 
             print(f"  ⚠️  [{month_tag}] {category or media_tag} 수집 실패(건너뜀): {e}")
     return merged
 
+def _slack_post(text, thread_ts=None):
+    """chat.postMessage 호출. 성공 시 응답 ts 반환, 실패 시 None."""
+    payload = {"channel": SLACK_CHANNEL_ID, "text": text}
+    if thread_ts:
+        payload["thread_ts"] = thread_ts
+    try:
+        r = requests.post(
+            "https://slack.com/api/chat.postMessage",
+            headers={"Authorization": f"Bearer {SLACK_BOT_TOKEN}",
+                     "Content-Type": "application/json; charset=utf-8"},
+            json=payload, timeout=15,
+        )
+        data = r.json()
+        if data.get("ok"):
+            return data.get("ts")
+        print(f"  ⚠️  슬랙 전송 실패: {data.get('error')}")
+        return None
+    except Exception as e:
+        print(f"  ⚠️  슬랙 전송 오류: {e}")
+        return None
+
 def notify_slack_new_fires(daily_ads):
-    """오늘 새로 발견된 성냥불/불씨(is_new)가 있으면 슬랙으로 알림. 없으면 아무것도 안 보냄."""
-    if not SLACK_WEBHOOK_URL:
+    """오늘 새로 발견된 성냥불/불씨(is_new)가 있으면 슬랙에 알림.
+    매 실행마다 [오늘의 불씨] 부모 메시지를 새로 만들고, 그 스레드에 상세 댓글 1개를 단다.
+    (매일 독립 스레드가 생성됨) 새 불씨/성냥불이 없으면 아무것도 안 보냄."""
+    if not (SLACK_BOT_TOKEN and SLACK_CHANNEL_ID):
         return
     new_all = [a for a in (daily_ads or []) if a.get("is_new")]
     new_embers = sorted([a for a in new_all if a.get("tier", "불씨") == "불씨"],
@@ -1531,6 +1555,16 @@ def notify_slack_new_fires(daily_ads):
         print("  ℹ️  새 성냥불·불씨 없음 → 슬랙 알림 생략")
         return
 
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
+
+    # ── 부모 메시지: [오늘의 불씨] 날짜 + 요약 ──
+    parent = f"🔥 *[오늘의 불씨]* {today_kst}\n🪵 성냥불 {len(new_matches)}건 · 🔥 불씨 {len(new_embers)}건"
+    parent_ts = _slack_post(parent)
+    if not parent_ts:
+        print("  ⚠️  부모 메시지 전송 실패 → 상세 댓글 생략")
+        return
+
+    # ── 스레드 댓글 1개: 성냥불 + 불씨 상세 ──
     lines = []
     if new_matches:
         lines.append(f"🪵 *새 성냥불 발견!* ({len(new_matches)}건)")
@@ -1545,16 +1579,9 @@ def notify_slack_new_fires(daily_ads):
             lines.append(f"　일광고비 {int(round(a['peak_daily_spend'])):,}원 · CPC {int(round(a['cpc'])):,}원 · CVR {a['cvr']:.2f}%")
         lines.append("")
     lines.append(f"👉 자세히 보기: {SITE_URL}")
-    payload = {"text": "\n".join(lines)}
 
-    try:
-        r = requests.post(SLACK_WEBHOOK_URL, json=payload, timeout=15)
-        if r.status_code == 200:
-            print(f"  📨 슬랙 알림 전송: 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건")
-        else:
-            print(f"  ⚠️  슬랙 알림 실패: HTTP {r.status_code} {r.text[:120]}")
-    except Exception as e:
-        print(f"  ⚠️  슬랙 알림 오류: {e}")
+    if _slack_post("\n".join(lines), thread_ts=parent_ts):
+        print(f"  📨 슬랙 알림 전송: 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건 (스레드)")
 
 def cleanup_old_videos(merged):
     """월 태그 6개월 초과 F_V 아카이브 영상(.mp4) 파일을 디스크에서 삭제(용량 절약).
