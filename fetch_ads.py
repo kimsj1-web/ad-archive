@@ -745,7 +745,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
         product = get_product(ad["name"])
 
         cards_html += f"""
-        <div class="{card_classes}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_filter}" data-periods="{periods_attr}"{card_click_attr}>
+        <div class="{card_classes}" data-grade="{ad['grade']}" data-product="{product}" data-media="{media_filter}" data-periods="{periods_attr}" data-name="{ad['name']}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
@@ -854,6 +854,10 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .period-select {{ padding:6px 30px 6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%238A8A9A' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>") no-repeat right 12px center; color:var(--text); font-size:13px; font-family:inherit; cursor:pointer; -webkit-appearance:none; appearance:none; }}
   .period-select:hover {{ border-color:#555; }}
   .period-select:focus {{ outline:none; border-color:var(--text); }}
+  .name-search {{ padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:13px; font-family:inherit; min-width:200px; }}
+  .name-search::placeholder {{ color:var(--muted); }}
+  .name-search:hover {{ border-color:#555; }}
+  .name-search:focus {{ outline:none; border-color:var(--text); }}
   .count {{ margin-left:auto; font-size:13px; color:var(--muted); }}
   .product-filters {{ padding:10px 32px 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
   .gallery {{ padding:8px 32px 60px; display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }}
@@ -1050,6 +1054,9 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   <select class="period-select" id="periodSelect">
     {period_options}
   </select>
+  <div class="divider"></div>
+  <span class="filter-label">검색</span>
+  <input type="text" class="name-search" id="nameSearch" placeholder="제품코드·광고명 (예: PC콘)" autocomplete="off">
 </div>
 <div class="gallery" id="gallery">
   {cards_html or '<div class="empty">고효율 기준(총 광고비 100만원 이상)을 충족하는 광고가 없습니다.</div>'}
@@ -1071,6 +1078,7 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   let activeMedia = 'all';
   let activeProduct = 'all';
   let activePeriod = 'all';
+  let searchQuery = '';
 
   // 유형별로 노출할 등급 버튼
   const gradeGroups = {{
@@ -1102,7 +1110,8 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
       const mediaOk = activeMedia === 'all' || c.dataset.media === activeMedia;
       const productOk = activeProduct === 'all' || c.dataset.product === activeProduct;
       const periodOk = activePeriod === 'all' || (c.dataset.periods || '').split(' ').includes(activePeriod);
-      const show = gradeOk && mediaOk && productOk && periodOk;
+      const nameOk = !searchQuery || (c.dataset.name || '').toLowerCase().includes(searchQuery);
+      const show = gradeOk && mediaOk && productOk && periodOk && nameOk;
       c.style.display = show ? '' : 'none';
       if (show) v++;
     }});
@@ -1143,6 +1152,12 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   const periodSelect = document.getElementById('periodSelect');
   if (periodSelect) periodSelect.addEventListener('change', () => {{
     activePeriod = periodSelect.value;
+    applyFilters();
+  }});
+
+  const nameSearch = document.getElementById('nameSearch');
+  if (nameSearch) nameSearch.addEventListener('input', () => {{
+    searchQuery = nameSearch.value.trim().toLowerCase();
     applyFilters();
   }});
 
