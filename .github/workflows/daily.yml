@@ -2,9 +2,12 @@ name: 광고 아카이브 자동 업데이트
 
 on:
   schedule:
-    # ── 오전 5시 47분 KST(=20:47 UTC): 하루 1회 — 고효율 아카이브(최근 3개월) + 일광고비·순위 모두 갱신 ──
-    # 정각(0분)은 전세계 요청이 몰려 스케줄이 밀리므로 47분으로 비켜서 예약. 새 불씨 슬랙 알림도 이 1회에만 발생.
-    - cron: "47 20 * * *"
+    # cron은 UTC 기준. 05:47 KST = 전날 20:47 UTC.
+    # ── 매일 05:47 KST: 일광고비·순위만 갱신 (+ 새 불씨 슬랙 알림) ──
+    #    토요일 KST(=금요일 UTC, day 5)는 아래 아카이브 cron이 대신 도므로 여기선 제외 → UTC day 0,1,2,3,4,6
+    - cron: "47 20 * * 0,1,2,3,4,6"
+    # ── 토요일 05:47 KST(=금요일 20:47 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
+    - cron: "47 20 * * 5"
 
   # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
@@ -55,8 +58,8 @@ jobs:
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
-          # 오전 5시 47분 KST(20:47 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 켜짐
-          AUTO_ARCHIVE: ${{ github.event.schedule == '47 20 * * *' && 'yes' || '' }}
+          # 토요일 05:47 KST(=금요일 20:47 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 (주 1회)
+          AUTO_ARCHIVE: ${{ github.event.schedule == '47 20 * * 5' && 'yes' || '' }}
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
