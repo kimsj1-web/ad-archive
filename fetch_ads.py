@@ -76,7 +76,8 @@ def month_index(tag):
     return (2000 + int(yy)) * 12 + (int(mm) - 1)
 
 # F_V 영상 보관 정책: 월 태그가 이 개월수 이상 지나면 로컬 영상 대신 메타 링크로 연결
-VIDEO_LOCAL_MONTHS = 6
+# F_V 영상 보관 정책: 월 태그가 이 개월수 이상 지나면 로컬 영상 대신 메타 링크로 연결 + 파일 삭제
+VIDEO_LOCAL_MONTHS = 1
 
 def is_old_month(month_tag):
     """월 태그가 현재(KST) 기준 6개월 이상 지났으면 True (→ 오래된 영상: 메타 링크)."""
@@ -845,6 +846,9 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .header-left h1 {{ font-size:22px; font-weight:700; letter-spacing:-0.5px; }}
   .header-left p {{ margin-top:4px; font-size:13px; color:var(--muted); }}
   .updated {{ font-size:12px; color:var(--muted); }}
+  .header-right {{ text-align:right; }}
+  .refresh-notice {{ font-size:11px; color:#6A6A7A; margin-top:6px; line-height:1.5; }}
+  .refresh-notice .kbd {{ color:var(--muted); font-weight:600; }}
   .controls {{ padding:16px 32px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }}
   .filter-label {{ font-size:11px; color:var(--muted); margin-right:2px; }}
   .filter-btn {{ padding:6px 16px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--muted); font-size:13px; cursor:pointer; transition:all .15s; font-family:inherit; }}
@@ -934,7 +938,10 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     <h1>전환배너 고효율 광고 아카이브</h1>
     <p>누적 조회: {periods_str}</p>
   </div>
-  <span class="updated">마지막 업데이트: {updated}</span>
+  <div class="header-right">
+    <span class="updated">마지막 업데이트: {updated}</span>
+    <p class="refresh-notice">오전 9시가 지났는데도 업데이트 날짜가 안 바뀌었다면<br><span class="kbd">Cmd+Shift+R</span> 로 강력 새로고침 해주세요!</p>
+  </div>
 </header>
 <div class="tabs">
   <button class="tab-btn" data-tab="rankPanel">순위</button>
@@ -1598,33 +1605,53 @@ def notify_slack_new_fires(daily_ads):
     if _slack_post("\n".join(lines), thread_ts=parent_ts):
         print(f"  📨 슬랙 알림 전송: 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건 (스레드)")
 
-def cleanup_old_videos(merged):
-    """월 태그 6개월 초과 F_V 아카이브 영상(.mp4) 파일을 디스크에서 삭제(용량 절약).
-    표시는 이미 메타 링크로 전환되므로, 로컬 파일과 기록의 video_url을 정리한다.
-    삭제 대상: media_type=video 이면서 가장 최근 월 태그가 6개월 초과인 아카이브 광고."""
-    removed, freed = 0, 0
+def cleanup_videos(merged, daily_ads=None, rankings=None):
+    """저장소 용량 관리: '유지할 영상'만 남기고 images/의 나머지 .mp4를 전부 삭제.
+    - 아카이브: 월 태그가 1개월(VIDEO_LOCAL_MONTHS) 이내인 F_V만 로컬 유지, 그 외는 메타 링크로 전환하고 삭제
+    - 일광고비/순위: 이번 실행에서 실제 노출되는 릴스/영상만 유지
+    이미지(.jpg)는 용량이 작아 건드리지 않는다."""
+    keep = set()
+
+    # 아카이브: 최근(1개월 이내) F_V만 유지, 오래된 건 메타 링크로 고정(+삭제 대상)
     for ad in merged:
         if ad.get("media_type") != "video":
             continue
         periods = ad.get("periods", [])
-        if not periods or not is_old_month(max(periods, key=month_index)):
-            continue
-        fpath = os.path.join(IMAGES_DIR, safe_filename(ad["name"], "video", "mp4"))
-        if os.path.exists(fpath):
+        if periods and not is_old_month(max(periods, key=month_index)):
+            keep.add(safe_filename(ad["name"], "video", "mp4"))
+        else:
+            if ad.get("video_url"):
+                ad["video_url"] = ""   # 오래된 아카이브 영상 → 메타 링크로 고정
+
+    # 일광고비(불씨·성냥불 릴스): 이번에 노출되는 것만 유지
+    for a in (daily_ads or []):
+        if a.get("is_video"):
+            keep.add(safe_filename(a["name"], "daily", "mp4"))
+
+    # 순위: 이번 순위에 등장하는 영상만 유지
+    if rankings:
+        for key in ("month", "week"):
+            for a in rankings.get(key, {}).get("ads", []):
+                if a.get("is_video"):
+                    keep.add(safe_filename(a["name"], "rank", "mp4"))
+
+    # images/ 안의 .mp4 중 유지 목록에 없는 것 전부 삭제
+    removed, freed = 0, 0
+    if os.path.isdir(IMAGES_DIR):
+        for fn in os.listdir(IMAGES_DIR):
+            if not fn.endswith(".mp4") or fn in keep:
+                continue
+            fp = os.path.join(IMAGES_DIR, fn)
             try:
-                freed += os.path.getsize(fpath)
-                os.remove(fpath)
+                freed += os.path.getsize(fp)
+                os.remove(fp)
                 removed += 1
             except Exception as e:
-                print(f"  ⚠️  영상 삭제 실패: {fpath} — {e}")
-                continue
-        # 파일이 없더라도(이미 삭제됐거나 미다운로드) 로컬 참조는 비워 메타 링크로 고정
-        if ad.get("video_url"):
-            ad["video_url"] = ""
+                print(f"  ⚠️  영상 삭제 실패: {fp} — {e}")
     if removed:
-        print(f"  🗑️  오래된 F_V 영상 {removed}개 삭제 (약 {freed/1024/1024:.1f}MB 정리)")
+        print(f"  🗑️  영상 정리: {removed}개 삭제 (약 {freed/1024/1024:.1f}MB), 로컬 유지 {len(keep)}개")
     else:
-        print("  ℹ️  삭제할 오래된 F_V 영상 없음")
+        print(f"  ℹ️  삭제할 영상 없음 (로컬 유지 {len(keep)}개)")
     return merged
 
 def main():
@@ -1671,13 +1698,6 @@ def main():
         print(f"  ⚠️  아카이브 단계 오류(기존 데이터 유지하고 계속): {e}")
         save_archive(merged)
 
-    # ── 1-b) 오래된 F_V 영상 파일 정리 (6개월 초과 → 삭제, 표시는 메타 링크) ──
-    try:
-        merged = cleanup_old_videos(merged)
-        save_archive(merged)
-    except Exception as e:
-        print(f"  ⚠️  영상 정리 단계 오류(건너뜀): {e}")
-
     # ── 2) 일광고비·순위 ──
     today = datetime.today()
     d_start = (today - timedelta(days=6)).strftime("%Y-%m-%d")
@@ -1708,6 +1728,13 @@ def main():
             rankings = None
         # 다음 수동 실행에서 재사용할 수 있게 저장
         save_tabs_cache(daily_ads, d_start, d_stop, rankings)
+
+    # ── 2-b) 영상 정리 (용량 관리): 유지 대상만 남기고 나머지 .mp4 삭제 ──
+    try:
+        merged = cleanup_videos(merged, daily_ads, rankings)
+        save_archive(merged)
+    except Exception as e:
+        print(f"  ⚠️  영상 정리 단계 오류(건너뜀): {e}")
 
     # ── 3) HTML 생성 ──
     with open("index.html", "w", encoding="utf-8") as f:
