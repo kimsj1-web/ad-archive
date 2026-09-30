@@ -13,7 +13,7 @@ on:
     #    토요일 KST(=금요일 UTC, day 5)는 아래 아카이브 cron이 대신 도므로 여기선 제외 → UTC day 0,1,2,3,4,6
     - cron: "23 20 * * 0,1,2,3,4,6"
     # ── 토요일 05:47 KST(=금요일 20:47 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
-    - cron: "12 20 * * 5"
+    - cron: "23 20 * * 5"
 
   # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
@@ -65,7 +65,7 @@ jobs:
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
           # 토요일 05:47 KST(=금요일 20:47 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 (주 1회)
-          AUTO_ARCHIVE: ${{ github.event.schedule == '47 20 * * 5' && 'yes' || '' }}
+          AUTO_ARCHIVE: ${{ github.event.schedule == '23 20 * * 5' && 'yes' || '' }}
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
