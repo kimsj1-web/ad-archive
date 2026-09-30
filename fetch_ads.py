@@ -653,6 +653,25 @@ def save_fire_seen(seen):
     except Exception as e:
         print(f"  ⚠️  불씨 발굴이력 저장 실패: {e}")
 
+# 슬랙 알림 전송 이력 (광고명 → 마지막으로 알림 보낸 날짜). 같은 날 중복 알림 방지용.
+ALERT_SENT_FILE = "alert_sent.json"
+
+def load_alert_sent():
+    if os.path.exists(ALERT_SENT_FILE):
+        try:
+            with open(ALERT_SENT_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_alert_sent(sent):
+    try:
+        with open(ALERT_SENT_FILE, "w", encoding="utf-8") as f:
+            json.dump(sent, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"  ⚠️  알림 이력 저장 실패: {e}")
+
 # ── 병합 (같은 광고명은 최신 수집값으로 교체 = upsert) ───────────────────────
 def merge_archive(existing, new_results, period_label):
     """같은 광고명을 다시 수집하면 합산하지 않고 '최신 값으로 교체'한다.
@@ -1568,16 +1587,19 @@ def notify_slack_new_fires(daily_ads):
     (매일 독립 스레드가 생성됨) 새 불씨/성냥불이 없으면 아무것도 안 보냄."""
     if not (SLACK_BOT_TOKEN and SLACK_CHANNEL_ID):
         return
-    new_all = [a for a in (daily_ads or []) if a.get("is_new")]
+    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
+
+    # 오늘 이미 알림 보낸 광고는 제외 (실행이 겹치거나 여러 번 돌아도 하루 한 번만)
+    alert_sent = load_alert_sent()
+    new_all = [a for a in (daily_ads or [])
+               if a.get("is_new") and alert_sent.get(a["name"]) != today_kst]
     new_embers = sorted([a for a in new_all if a.get("tier", "불씨") == "불씨"],
                         key=lambda x: (DAILY_GRADE_RANK.get(x["grade"], 9), -x["peak_daily_spend"]))
     new_matches = sorted([a for a in new_all if a.get("tier") == "성냥불"],
                          key=lambda x: -x["peak_daily_spend"])
     if not new_embers and not new_matches:
-        print("  ℹ️  새 성냥불·불씨 없음 → 슬랙 알림 생략")
+        print("  ℹ️  보낼 새 성냥불·불씨 없음(또는 이미 오늘 전송함) → 슬랙 알림 생략")
         return
-
-    today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
 
     # ── 부모 메시지: [오늘의 불씨] 날짜 + 요약 ──
     parent = f"🔥 *[오늘의 불씨]* {today_kst}\n🪵 성냥불 {len(new_matches)}건 · 🔥 불씨 {len(new_embers)}건"
@@ -1604,6 +1626,11 @@ def notify_slack_new_fires(daily_ads):
 
     if _slack_post("\n".join(lines), thread_ts=parent_ts):
         print(f"  📨 슬랙 알림 전송: 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건 (스레드)")
+        # 오늘 알림 보낸 광고 기록 (다음 실행에서 중복 방지). 파일은 오늘치만 남겨 가볍게 유지
+        for a in new_all:
+            alert_sent[a["name"]] = today_kst
+        alert_sent = {name: d for name, d in alert_sent.items() if d == today_kst}
+        save_alert_sent(alert_sent)
 
 def cleanup_videos(merged, daily_ads=None, rankings=None):
     """저장소 용량 관리: '유지할 영상'만 남기고 images/의 나머지 .mp4를 전부 삭제.
