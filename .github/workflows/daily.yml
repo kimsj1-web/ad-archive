@@ -1,13 +1,19 @@
 name: 광고 아카이브 자동 업데이트
 
+# 같은 워크플로우가 겹쳐 돌지 않도록: 이미 실행 중이면 새 실행은 그게 끝난 뒤에 진행
+# (cancel-in-progress: false → 진행 중인 실행을 죽이지 않고 큐에 대기시킴)
+concurrency:
+  group: ad-archive-update
+  cancel-in-progress: false
+
 on:
   schedule:
     # cron은 UTC 기준. 05:47 KST = 전날 20:47 UTC.
     # ── 매일 05:47 KST: 일광고비·순위만 갱신 (+ 새 불씨 슬랙 알림) ──
     #    토요일 KST(=금요일 UTC, day 5)는 아래 아카이브 cron이 대신 도므로 여기선 제외 → UTC day 0,1,2,3,4,6
-    - cron: "47 20 * * 0,1,2,3,4,6"
+    - cron: "23 20 * * 0,1,2,3,4,6"
     # ── 토요일 05:47 KST(=금요일 20:47 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
-    - cron: "47 20 * * 5"
+    - cron: "12 20 * * 5"
 
   # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
@@ -69,6 +75,7 @@ jobs:
           git add -A index.html archive.json images/
           if [ -f tabs_cache.json ]; then git add tabs_cache.json; fi
           if [ -f fire_seen.json ]; then git add fire_seen.json; fi
+          if [ -f alert_sent.json ]; then git add alert_sent.json; fi
           TAG="${{ github.event.inputs.month_tag }}"
           [ -z "$TAG" ] && TAG="자동갱신"
           git diff --staged --quiet || git commit -m "chore: [$TAG] 광고 아카이브 업데이트 $(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M KST')"
