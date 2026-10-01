@@ -8,12 +8,12 @@ concurrency:
 
 on:
   schedule:
-    # cron은 UTC 기준. 05:47 KST = 전날 20:47 UTC.
-    # ── 매일 05:47 KST: 일광고비·순위만 갱신 (+ 새 불씨 슬랙 알림) ──
+    # cron은 UTC 기준. 04:23 KST = 전날 19:23 UTC.
+    # ── 매일 04:23 KST: 일광고비·순위만 갱신 (+ 새 불씨 슬랙 알림) ──
     #    토요일 KST(=금요일 UTC, day 5)는 아래 아카이브 cron이 대신 도므로 여기선 제외 → UTC day 0,1,2,3,4,6
-    - cron: "23 20 * * 0,1,2,3,4,6"
-    # ── 토요일 05:47 KST(=금요일 20:47 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
-    - cron: "23 20 * * 5"
+    - cron: "23 19 * * 0,1,2,3,4,6"
+    # ── 토요일 04:23 KST(=금요일 19:23 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
+    - cron: "23 19 * * 5"
 
   # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
@@ -46,6 +46,16 @@ jobs:
       - name: 저장소 체크아웃
         uses: actions/checkout@v4
 
+      - name: 최신 상태로 동기화
+        # concurrency로 대기했다 실행될 때, 앞 실행이 방금 커밋한 기록(alert_sent.json 등)을
+        # 반영하도록 origin/main 최신 상태로 맞춘다 (중복 알림 방지의 핵심)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
       - name: Python 설치
         uses: actions/setup-python@v5
         with:
@@ -64,8 +74,8 @@ jobs:
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
-          # 토요일 05:47 KST(=금요일 20:47 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 (주 1회)
-          AUTO_ARCHIVE: ${{ github.event.schedule == '23 20 * * 5' && 'yes' || '' }}
+          # 토요일 04:23 KST(=금요일 19:23 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 (주 1회)
+          AUTO_ARCHIVE: ${{ github.event.schedule == '23 19 * * 5' && 'yes' || '' }}
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
