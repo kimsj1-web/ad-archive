@@ -7,13 +7,14 @@ concurrency:
   cancel-in-progress: false
 
 on:
+  # ── 주 트리거: 외부 스케줄러(cron-job.org 등)가 정시에 이 이벤트로 깨움 ──
+  #    GitHub 내부 cron은 수시간씩 밀리므로, 정확한 시각은 외부 호출로 보장한다.
+  repository_dispatch:
+    types: [external-trigger]
+
   schedule:
-    # cron은 UTC 기준. 04:23 KST = 전날 19:23 UTC.
-    # ── 매일 04:23 KST: 일광고비·순위만 갱신 (+ 새 불씨 슬랙 알림) ──
-    #    토요일 KST(=금요일 UTC, day 5)는 아래 아카이브 cron이 대신 도므로 여기선 제외 → UTC day 0,1,2,3,4,6
-    - cron: "23 19 * * 0,1,2,3,4,6"
-    # ── 토요일 04:23 KST(=금요일 19:23 UTC, day 5): 위 + 고효율 아카이브(최근 3개월) 주 1회 갱신 ──
-    - cron: "23 19 * * 5"
+    # ── 백업용 GitHub 내부 cron (밀릴 수 있음). 04:23 KST = 전날 19:23 UTC, 매일 ──
+    - cron: "23 19 * * *"
 
   # ── 수동 실행: 과거 월 아카이빙 등 특정 월 지정용 ──
   workflow_dispatch:
@@ -64,6 +65,18 @@ jobs:
       - name: 의존성 설치
         run: pip install requests
 
+      - name: 아카이브 갱신 여부 결정 (KST 토요일만, 수동 실행 제외)
+        # 외부 트리거/스케줄로 돌 때 KST 요일이 토요일이면 아카이브 자동 갱신 켬.
+        # 수동 실행(workflow_dispatch)은 MONTH_TAG로 제어하므로 여기선 제외.
+        run: |
+          DOW=$(TZ='Asia/Seoul' date +%u)   # 1=월 … 6=토, 7=일
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ "$DOW" = "6" ]; then
+            echo "AUTO_ARCHIVE=yes" >> "$GITHUB_ENV"
+            echo "→ KST 토요일: 아카이브 자동 갱신 ON"
+          else
+            echo "→ 아카이브 자동 갱신 OFF"
+          fi
+
       - name: 광고 데이터 수집 및 HTML 생성
         env:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
@@ -74,8 +87,7 @@ jobs:
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
           DATE_STOP: ${{ github.event.inputs.date_stop }}
-          # 토요일 04:23 KST(=금요일 19:23 UTC) 스케줄로 돌 때만 아카이브 자동 갱신 (주 1회)
-          AUTO_ARCHIVE: ${{ github.event.schedule == '23 19 * * 5' && 'yes' || '' }}
+          # AUTO_ARCHIVE는 위 단계에서 토요일에만 설정됨 (없으면 비어있음 = 아카이브 안 함)
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
