@@ -11,8 +11,9 @@ MONTH_TAG     = os.environ.get("MONTH_TAG", "")
 DATE_START    = os.environ.get("DATE_START", "")
 DATE_STOP     = os.environ.get("DATE_STOP", "")
 MEDIA_MODE    = os.environ.get("MEDIA_MODE", "all")  # image / video / all
-SLACK_BOT_TOKEN  = os.environ.get("SLACK_BOT_TOKEN", "")   # 새 불씨 슬랙 알림 (Bot Token, 없으면 알림 생략)
-SLACK_CHANNEL_ID = os.environ.get("SLACK_CHANNEL_ID", "")  # 알림 보낼 채널 ID
+SLACK_BOT_TOKEN   = os.environ.get("SLACK_BOT_TOKEN", "")   # 새 불씨 슬랙 알림 (Bot Token, 없으면 알림 생략)
+# 알림 DM 받을 유저 ID 목록 (콤마 구분, 예: "U01ABC,U02DEF"). 비어있으면 알림 생략
+SLACK_DM_USER_IDS = [u.strip() for u in os.environ.get("SLACK_DM_USER_IDS", "").split(",") if u.strip()]
 SITE_URL      = "https://kimsj1-web.github.io/ad-archive/"
 
 API_VERSION  = "v19.0"
@@ -1667,9 +1668,10 @@ def run_archive_for_month(merged, month_tag, media_mode="all", date_start=None, 
             print(f"  ⚠️  [{month_tag}] {category or media_tag} 수집 실패(건너뜀): {e}")
     return merged
 
-def _slack_post(text, thread_ts=None):
-    """chat.postMessage 호출. 성공 시 응답 ts 반환, 실패 시 None."""
-    payload = {"channel": SLACK_CHANNEL_ID, "text": text}
+def _slack_post(channel, text, thread_ts=None):
+    """chat.postMessage 호출. channel에 유저 ID(U...)를 넣으면 그 사람과의 DM으로 전송.
+    성공 시 응답 ts 반환, 실패 시 None."""
+    payload = {"channel": channel, "text": text}
     if thread_ts:
         payload["thread_ts"] = thread_ts
     try:
@@ -1689,10 +1691,10 @@ def _slack_post(text, thread_ts=None):
         return None
 
 def notify_slack_new_fires(daily_ads):
-    """오늘 새로 발견된 성냥불/불씨(is_new)가 있으면 슬랙에 알림.
-    매 실행마다 [오늘의 불씨] 부모 메시지를 새로 만들고, 그 스레드에 상세 댓글 1개를 단다.
-    (매일 독립 스레드가 생성됨) 새 불씨/성냥불이 없으면 아무것도 안 보냄."""
-    if not (SLACK_BOT_TOKEN and SLACK_CHANNEL_ID):
+    """오늘 새로 발견된 성냥불/불씨(is_new)가 있으면 신청자들에게 개별 DM으로 알림.
+    SLACK_DM_USER_IDS의 각 사람에게 [오늘의 불씨] 부모 메시지 + 상세 스레드 댓글 1개를 보낸다.
+    (사람마다 매일 독립 스레드가 생성됨) 새 불씨/성냥불이 없으면 아무것도 안 보냄."""
+    if not (SLACK_BOT_TOKEN and SLACK_DM_USER_IDS):
         return
     today_kst = (datetime.now(timezone.utc) + timedelta(hours=9)).strftime("%Y-%m-%d")
 
@@ -1710,12 +1712,8 @@ def notify_slack_new_fires(daily_ads):
 
     # ── 부모 메시지: [오늘의 불씨] 날짜 + 요약 ──
     parent = f"🔥 *[오늘의 불씨]* {today_kst}\n🪵 성냥불 {len(new_matches)}건 · 🔥 불씨 {len(new_embers)}건"
-    parent_ts = _slack_post(parent)
-    if not parent_ts:
-        print("  ⚠️  부모 메시지 전송 실패 → 상세 댓글 생략")
-        return
 
-    # ── 스레드 댓글 1개: 성냥불 + 불씨 상세 ──
+    # ── 스레드 댓글 1개: 성냥불 + 불씨 상세 (모든 수신자 공통) ──
     lines = []
     if new_matches:
         lines.append(f"🪵 *새 성냥불 발견!* ({len(new_matches)}건)")
@@ -1731,14 +1729,29 @@ def notify_slack_new_fires(daily_ads):
             lines.append(f"　일광고비 {int(round(a['peak_daily_spend'])):,}원 · CPC {int(round(a['cpc'])):,}원 · CVR {a['cvr']:.2f}%")
         lines.append("")
     lines.append(f"👉 자세히 보기: {SITE_URL}")
+    detail = "\n".join(lines)
 
-    if _slack_post("\n".join(lines), thread_ts=parent_ts):
-        print(f"  📨 슬랙 알림 전송: 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건 (스레드)")
+    # ── 신청자별 개별 DM 전송 (channel 자리에 유저 ID → 봇과 그 사람의 DM) ──
+    sent_cnt = 0
+    for uid in SLACK_DM_USER_IDS:
+        parent_ts = _slack_post(uid, parent)
+        if not parent_ts:
+            print(f"  ⚠️  DM 부모 전송 실패: {uid}")
+            continue
+        if _slack_post(uid, detail, thread_ts=parent_ts):
+            sent_cnt += 1
+        else:
+            print(f"  ⚠️  DM 상세 전송 실패: {uid}")
+
+    if sent_cnt:
+        print(f"  📨 슬랙 DM 전송: {sent_cnt}/{len(SLACK_DM_USER_IDS)}명 · 성냥불 {len(new_matches)}건 · 불씨 {len(new_embers)}건")
         # 오늘 알림 보낸 광고 기록 (다음 실행에서 중복 방지). 파일은 오늘치만 남겨 가볍게 유지
         for a in new_all:
             alert_sent[a["name"]] = today_kst
         alert_sent = {name: d for name, d in alert_sent.items() if d == today_kst}
         save_alert_sent(alert_sent)
+    else:
+        print("  ⚠️  DM 전송 성공자 없음 → alert_sent 미기록 (다음 실행에서 재시도)")
 
 def cleanup_videos(merged, daily_ads=None, rankings=None):
     """저장소 용량 관리: '유지할 영상'만 남기고 images/의 나머지 .mp4를 전부 삭제.
