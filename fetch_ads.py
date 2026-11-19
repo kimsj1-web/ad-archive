@@ -375,7 +375,7 @@ def collect_daily_spikes(date_start, date_stop):
     """최근 7일 집행된 이미지·릴스 배너(F_I) 중
     하루 최고 지출이 등급 기준(30만↑)에 걸리는 광고만 반환.
     2단계: ① 지출 있었던 광고 목록만 가볍게 조회 → ② F_I만 광고별 일자 조회."""
-    print(f"🔥 일광고비 스캔: {date_start} ~ {date_stop} (F_I 이미지·릴스 / 최근 7일)")
+    print(f"🔥 일광고비 스캔: {date_start} ~ {date_stop} (F_I 이미지·릴스 + F_V 영상 / 최근 7일)")
 
     # 불씨 최초 발굴일 기록 로드 + 오늘(KST) 날짜
     fire_seen = load_fire_seen()
@@ -388,17 +388,17 @@ def collect_daily_spikes(date_start, date_stop):
         print(f"  ⚠️  광고 목록 조회 실패 → 일광고비 탭은 이번엔 건너뜀: {e}")
         return []
 
-    # F_I 배너만, 지출>0. 같은 이름이 여러 광고에 있으면 ad_id들을 모아둠
+    # F_I(이미지·릴스) + F_V(영상) 배너, 지출>0. 같은 이름이 여러 광고에 있으면 ad_id들을 모아둠
     name_to_ids = {}
     for r in active:
         name = r.get("ad_name", "")
-        if "F_I" not in name:                 # F_I 배너만 (이미지 + 릴스)
+        if ("F_I" not in name) and ("F_V" not in name):   # F_I·F_V 배너만
             continue
         if float(r.get("spend", 0)) <= 0:      # 이번주 집행분만
             continue
         name_to_ids.setdefault(name, []).append(r.get("ad_id", ""))
 
-    print(f"  → F_I 집행 광고 {len(name_to_ids)}개 → 광고별 일자 조회")
+    print(f"  → F_I·F_V 집행 광고 {len(name_to_ids)}개 → 광고별 일자 조회")
 
     # ── 2) 광고별 일자 조회 후 등급 판정 ──
     results = []
@@ -420,29 +420,41 @@ def collect_daily_spikes(date_start, date_stop):
         if not date_spend:
             continue
         peak_daily = max(date_spend.values())
-        grade = get_daily_grade(peak_daily)     # SS/S/A/B(30만↑) 또는 None
-        if grade is not None:
-            tier = "불씨"
-        elif peak_daily >= 100_000:             # 10만~30만 = 성냥불
-            tier = "성냥불"
+        media_tag = "F_V" if "F_V" in name else "F_I"
+        if media_tag == "F_V":
+            # F_V(영상): 등급 없음. 불씨 100만↑ / 성냥불 60만~100만 미만
+            grade = None
+            if peak_daily >= 1_000_000:
+                tier = "불씨"
+            elif peak_daily >= 600_000:
+                tier = "성냥불"
+            else:
+                continue                        # 60만 미만 제외
         else:
-            continue                            # 10만 미만 제외
+            # F_I(이미지·릴스): 불씨 30만↑(SS/S/A/B) / 성냥불 10만~30만 미만
+            grade = get_daily_grade(peak_daily)
+            if grade is not None:
+                tier = "불씨"
+            elif peak_daily >= 100_000:
+                tier = "성냥불"
+            else:
+                continue                        # 10만 미만 제외
         peak_date = max(date_spend, key=date_spend.get)
         cpc = tot_spend / tot_clicks if tot_clicks else 0
         cvr = (tot_purch / tot_link * 100) if tot_link else 0
 
-        print(f"  {'🔥' if tier=='불씨' else '🪵'} {tier} {grade or ''} | {name[:42]} | 일최고 {peak_daily:,.0f}원 ({peak_date})")
+        print(f"  {'🔥' if tier=='불씨' else '🪵'} {tier} {grade or media_tag} | {name[:42]} | 일최고 {peak_daily:,.0f}원 ({peak_date})")
 
-        # 릴스는 영상까지 받아서 팝업 재생, 나머지는 이미지 썸네일만
+        # 영상 재생 대상: F_V(영상) + F_I 릴스 → 영상까지 받아 팝업 재생, 나머지는 이미지 썸네일만
         creative_id = fetch_ad_creative_id(ad_ids[0])
-        is_reels = "릴스" in name
-        fetch_type = "video" if is_reels else "image"
+        is_video_ad = (media_tag == "F_V") or ("릴스" in name)
+        fetch_type = "video" if is_video_ad else "image"
         media = fetch_creative_media(creative_id, fetch_type)
         img_filename = safe_filename(name, "daily", "jpg")
         local_img = download_media(media["image_url"], img_filename)
 
         local_video = ""
-        if is_reels and media.get("video_url"):
+        if is_video_ad and media.get("video_url"):
             vid_filename = safe_filename(name, "daily", "mp4")
             local_video = download_media(media["video_url"], vid_filename)
 
@@ -470,8 +482,9 @@ def collect_daily_spikes(date_start, date_stop):
             "cvr":              cvr,
             "grade":            grade,
             "tier":             tier,
+            "media_tag":        media_tag,
             "image_url":        local_img if local_img else media["image_url"],
-            "is_video":         is_reels,
+            "is_video":         is_video_ad,
             "video_url":        local_video if local_video else media.get("video_url", ""),
             "video_permalink":  media.get("video_permalink", ""),
             "first_seen":       first_seen,
@@ -482,8 +495,10 @@ def collect_daily_spikes(date_start, date_stop):
 
     ember = sum(1 for r in results if r["tier"] == "불씨")
     match = sum(1 for r in results if r["tier"] == "성냥불")
+    ember_fv = sum(1 for r in results if r["tier"] == "불씨" and r["media_tag"] == "F_V")
+    match_fv = sum(1 for r in results if r["tier"] == "성냥불" and r["media_tag"] == "F_V")
     new_cnt = sum(1 for r in results if r["is_new"])
-    print(f"  → 불씨 {ember}개 · 성냥불 {match}개 (오늘 NEW {new_cnt}개)")
+    print(f"  → 불씨 {ember}개(F_V {ember_fv}) · 성냥불 {match}개(F_V {match_fv}) (오늘 NEW {new_cnt}개)")
     return results
 
 # ── 순위(월별/주별) 집계 ──────────────────────────────────────────────────────
@@ -810,16 +825,22 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
 
         product = get_product(ad["name"])
         tier = ad.get("tier", "불씨")
+        media_tag = ad.get("media_tag", "F_I")
         if tier == "성냥불":
             badge = '<span class="match-badge">🔥 성냥불</span>'
             new_badge = '<span class="new-badge new-badge-left">NEW!</span>' if ad.get("is_new") else ''
-        else:
+        elif ad.get("grade"):
+            # F_I 불씨: SS/S/A/B 등급 배지
             gcolor = get_daily_grade_color(ad["grade"])
             badge = f'<span class="grade-badge" style="background:{gcolor}">{ad["grade"]}</span>'
             new_badge = '<span class="new-badge">NEW!</span>' if ad.get("is_new") else ''
+        else:
+            # F_V 불씨: 등급 없음 → 불씨 배지
+            badge = '<span class="ember-badge">🔥 불씨</span>'
+            new_badge = '<span class="new-badge">NEW!</span>' if ad.get("is_new") else ''
 
         return f"""
-        <div class="{card_classes}" data-tier="{tier}" data-grade="{ad.get('grade') or ''}" data-product="{product}"{card_click_attr}>
+        <div class="{card_classes}" data-tier="{tier}" data-media="{media_tag}" data-grade="{ad.get('grade') or ''}" data-product="{product}"{card_click_attr}>
             <div class="card-img">
                 {img_tag}
                 {play_overlay}
@@ -839,12 +860,22 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
             </div>
         </div>"""
 
-    embers = sorted([a for a in daily_ads if a.get("tier", "불씨") == "불씨"],
-                    key=lambda x: (not x["is_new"], DAILY_GRADE_RANK.get(x["grade"], 9), -x["peak_daily_spend"]))
-    matchfires = sorted([a for a in daily_ads if a.get("tier") == "성냥불"],
-                        key=lambda x: (not x["is_new"], -x["peak_daily_spend"]))
-    ember_cards_html = "".join(_daily_card(a) for a in embers)
-    matchfire_cards_html = "".join(_daily_card(a) for a in matchfires)
+    def _is_fv(a):
+        return a.get("media_tag") == "F_V"
+    def _sort_grade(ads):   # F_I 불씨: 등급순 → 광고비순 (NEW 우선)
+        return sorted(ads, key=lambda x: (not x["is_new"], DAILY_GRADE_RANK.get(x["grade"], 9), -x["peak_daily_spend"]))
+    def _sort_spend(ads):   # 그 외: 광고비순 (NEW 우선)
+        return sorted(ads, key=lambda x: (not x["is_new"], -x["peak_daily_spend"]))
+
+    ember_img  = _sort_grade([a for a in daily_ads if a.get("tier") == "불씨"  and not _is_fv(a)])
+    ember_vid  = _sort_spend([a for a in daily_ads if a.get("tier") == "불씨"  and _is_fv(a)])
+    match_img  = _sort_spend([a for a in daily_ads if a.get("tier") == "성냥불" and not _is_fv(a)])
+    match_vid  = _sort_spend([a for a in daily_ads if a.get("tier") == "성냥불" and _is_fv(a)])
+
+    ember_img_html = "".join(_daily_card(a) for a in ember_img)
+    ember_vid_html = "".join(_daily_card(a) for a in ember_vid)
+    match_img_html = "".join(_daily_card(a) for a in match_img)
+    match_vid_html = "".join(_daily_card(a) for a in match_vid)
 
     # ── 순위 데이터 (JS에서 정렬/필터/TOP20) ──
     rankings = rankings or {"month": {"label": "", "ads": []}, "week": {"label": "", "ads": []}}
@@ -892,7 +923,12 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   .grade-badge {{ position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; }}
   .new-badge {{ position:absolute; top:10px; right:54px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:800; color:#fff; background:#FF2D55; box-shadow:0 2px 6px rgba(255,45,85,.5); letter-spacing:.3px; }}
   .match-badge {{ position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#633806; background:#FAC775; }}
+  .ember-badge {{ position:absolute; top:10px; right:10px; padding:3px 10px; border-radius:20px; font-size:12px; font-weight:700; color:#fff; background:#FF6B00; }}
   .new-badge-left {{ left:10px; right:auto; }}
+  .subsection-head {{ display:flex; align-items:center; gap:8px; padding:6px 32px 2px; margin-top:16px; font-size:13px; font-weight:600; }}
+  .subsection-head.img-head {{ color:#FF9500; }}
+  .subsection-head.vid-head {{ color:#5DCAA5; }}
+  .dgrade-btn.disabled {{ opacity:.35; pointer-events:none; }}
   .play-icon {{ position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:54px; height:54px; border-radius:50%; background:rgba(0,0,0,.55); border:2px solid rgba(255,255,255,.9); color:#fff; font-size:20px; display:flex; align-items:center; justify-content:center; padding-left:4px; pointer-events:none; transition:background .15s; }}
   .card.has-video {{ cursor:pointer; }}
   .card.has-video:hover .play-icon {{ background:rgba(0,0,0,.8); }}
@@ -1014,25 +1050,40 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
 <section class="tab-panel active" id="dailyPanel">
   <div class="section-head">
     <h2 class="section-title">🪵 이번주 성냥불</h2>
-    <span class="section-sub">최근 7일 · {daily_start} ~ {daily_stop} · 하루 최고 지출 10만원 이상 ~ 30만원 미만</span>
+    <span class="section-sub">최근 7일 · {daily_start} ~ {daily_stop} · 이미지 10만~30만 미만 · 영상 60만~100만 미만</span>
   </div>
   <div class="product-filters">
+    <span class="filter-label">유형</span>
+    <button class="filter-btn mmedia-btn active" data-media="all">전체</button>
+    <button class="filter-btn mmedia-btn" data-media="F_I">이미지</button>
+    <button class="filter-btn mmedia-btn" data-media="F_V">영상</button>
+    <div class="divider"></div>
     <span class="filter-label">제품군</span>
     <button class="filter-btn mproduct-btn active" data-product="all">전체</button>
     <button class="filter-btn mproduct-btn" data-product="빙과">빙과</button>
     <button class="filter-btn mproduct-btn" data-product="제과">제과</button>
     <span class="count" id="matchCount"></span>
   </div>
-  <div class="gallery" id="matchGallery">
-    {matchfire_cards_html}
+  <div class="subsection" id="matchImgSub">
+    <div class="subsection-head img-head">📷 이미지 (F_I)</div>
+    <div class="gallery">{match_img_html}</div>
+  </div>
+  <div class="subsection" id="matchVidSub">
+    <div class="subsection-head vid-head">🎬 영상 (F_V) · 클릭 시 재생</div>
+    <div class="gallery">{match_vid_html}</div>
   </div>
   <div class="empty" id="matchEmpty" style="display:none;">성냥불 발견중...</div>
 
   <div class="section-head" style="margin-top:40px;">
     <h2 class="section-title">🔥 이번주 불씨</h2>
-    <span class="section-sub">최근 7일 · {daily_start} ~ {daily_stop} · 하루 최고 지출 30만원 이상</span>
+    <span class="section-sub">최근 7일 · {daily_start} ~ {daily_stop} · 이미지 30만 이상 · 영상 100만 이상</span>
   </div>
   <div class="product-filters">
+    <span class="filter-label">유형</span>
+    <button class="filter-btn dmedia-btn active" data-media="all">전체</button>
+    <button class="filter-btn dmedia-btn" data-media="F_I">이미지</button>
+    <button class="filter-btn dmedia-btn" data-media="F_V">영상</button>
+    <div class="divider"></div>
     <span class="filter-label">제품군</span>
     <button class="filter-btn dproduct-btn active" data-product="all">전체</button>
     <button class="filter-btn dproduct-btn" data-product="빙과">빙과</button>
@@ -1046,8 +1097,13 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     <button class="filter-btn dgrade-btn" data-grade="B">B</button>
     <span class="count" id="dailyCount"></span>
   </div>
-  <div class="gallery" id="dailyGallery">
-    {ember_cards_html}
+  <div class="subsection" id="dailyImgSub">
+    <div class="subsection-head img-head">📷 이미지 (F_I) · SS/S/A/B 등급</div>
+    <div class="gallery">{ember_img_html}</div>
+  </div>
+  <div class="subsection" id="dailyVidSub">
+    <div class="subsection-head vid-head">🎬 영상 (F_V) · 등급 없음 · 클릭 시 재생</div>
+    <div class="gallery">{ember_vid_html}</div>
   </div>
   <div class="empty" id="dailyEmpty" style="display:none;">불씨 발굴중...</div>
 </section>
@@ -1245,24 +1301,55 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
     }});
   }});
 
-  // ── 불씨 필터 (제품군 + 등급) ──
-  const fireCards  = [...document.querySelectorAll('#dailyGallery .fire-card')];
+  // 소섹션 헤더+갤러리를 카드 노출 여부에 따라 통째로 보이거나 숨김
+  function toggleSub(subEl) {{
+    const anyShown = [...subEl.querySelectorAll('.fire-card')].some(c => c.style.display !== 'none');
+    subEl.style.display = anyShown ? '' : 'none';
+    return anyShown;
+  }}
+
+  // ── 불씨 필터 (유형 + 제품군 + 등급) ──
+  const emberImgSub = document.getElementById('dailyImgSub');
+  const emberVidSub = document.getElementById('dailyVidSub');
+  const emberImgCards = [...emberImgSub.querySelectorAll('.fire-card')];
+  const emberVidCards = [...emberVidSub.querySelectorAll('.fire-card')];
   const dailyCount = document.getElementById('dailyCount');
   const dailyEmpty = document.getElementById('dailyEmpty');
-  let dProduct = 'all';
-  let dGrade = 'all';
+  const dgradeBtns = [...document.querySelectorAll('.dgrade-btn')];
+  let dMedia = 'all', dProduct = 'all', dGrade = 'all';
   function applyDaily() {{
+    // 영상만 볼 땐 등급 필터 무의미 → 비활성 표시
+    const gradeOff = (dMedia === 'F_V');
+    dgradeBtns.forEach(b => b.classList.toggle('disabled', gradeOff));
+
     let v = 0;
-    fireCards.forEach(c => {{
-      const pOk = dProduct === 'all' || c.dataset.product === dProduct;
-      const gOk = dGrade === 'all' || c.dataset.grade === dGrade;
-      const show = pOk && gOk;
+    const showImg = (dMedia === 'all' || dMedia === 'F_I');
+    emberImgCards.forEach(c => {{
+      const show = showImg
+        && (dProduct === 'all' || c.dataset.product === dProduct)
+        && (dGrade === 'all' || c.dataset.grade === dGrade);
       c.style.display = show ? '' : 'none';
       if (show) v++;
     }});
+    const showVid = (dMedia === 'all' || dMedia === 'F_V');
+    emberVidCards.forEach(c => {{
+      const show = showVid && (dProduct === 'all' || c.dataset.product === dProduct);
+      c.style.display = show ? '' : 'none';
+      if (show) v++;
+    }});
+    toggleSub(emberImgSub);
+    toggleSub(emberVidSub);
     dailyCount.textContent = v + '개';
     dailyEmpty.style.display = v === 0 ? '' : 'none';
   }}
+  document.querySelectorAll('.dmedia-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.dmedia-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      dMedia = btn.dataset.media;
+      applyDaily();
+    }});
+  }});
   document.querySelectorAll('.dproduct-btn').forEach(btn => {{
     btn.addEventListener('click', () => {{
       document.querySelectorAll('.dproduct-btn').forEach(b => b.classList.remove('active'));
@@ -1281,21 +1368,41 @@ def build_html(ads_data, daily_ads=None, daily_start="", daily_stop="", rankings
   }});
   applyDaily();
 
-  // ── 성냥불 필터 (제품군만, 등급 없음) ──
-  const matchCards = [...document.querySelectorAll('#matchGallery .fire-card')];
+  // ── 성냥불 필터 (유형 + 제품군, 등급 없음) ──
+  const matchImgSub = document.getElementById('matchImgSub');
+  const matchVidSub = document.getElementById('matchVidSub');
+  const matchImgCards = [...matchImgSub.querySelectorAll('.fire-card')];
+  const matchVidCards = [...matchVidSub.querySelectorAll('.fire-card')];
   const matchCount = document.getElementById('matchCount');
   const matchEmpty = document.getElementById('matchEmpty');
-  let mProduct = 'all';
+  let mMedia = 'all', mProduct = 'all';
   function applyMatch() {{
     let v = 0;
-    matchCards.forEach(c => {{
-      const show = mProduct === 'all' || c.dataset.product === mProduct;
+    const showImg = (mMedia === 'all' || mMedia === 'F_I');
+    matchImgCards.forEach(c => {{
+      const show = showImg && (mProduct === 'all' || c.dataset.product === mProduct);
       c.style.display = show ? '' : 'none';
       if (show) v++;
     }});
+    const showVid = (mMedia === 'all' || mMedia === 'F_V');
+    matchVidCards.forEach(c => {{
+      const show = showVid && (mProduct === 'all' || c.dataset.product === mProduct);
+      c.style.display = show ? '' : 'none';
+      if (show) v++;
+    }});
+    toggleSub(matchImgSub);
+    toggleSub(matchVidSub);
     matchCount.textContent = v + '개';
     matchEmpty.style.display = v === 0 ? '' : 'none';
   }}
+  document.querySelectorAll('.mmedia-btn').forEach(btn => {{
+    btn.addEventListener('click', () => {{
+      document.querySelectorAll('.mmedia-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mMedia = btn.dataset.media;
+      applyMatch();
+    }});
+  }});
   document.querySelectorAll('.mproduct-btn').forEach(btn => {{
     btn.addEventListener('click', () => {{
       document.querySelectorAll('.mproduct-btn').forEach(b => b.classList.remove('active'));
@@ -1619,7 +1726,8 @@ def notify_slack_new_fires(daily_ads):
     if new_embers:
         lines.append(f"🔥 *새 불씨 발견!* ({len(new_embers)}건)")
         for a in new_embers:
-            lines.append(f"*[{a['grade']}] {a['name']}*")
+            tag = a['grade'] if a.get('grade') else '영상'   # F_V 불씨는 등급 없음 → [영상]
+            lines.append(f"*[{tag}] {a['name']}*")
             lines.append(f"　일광고비 {int(round(a['peak_daily_spend'])):,}원 · CPC {int(round(a['cpc'])):,}원 · CVR {a['cvr']:.2f}%")
         lines.append("")
     lines.append(f"👉 자세히 보기: {SITE_URL}")
