@@ -57,17 +57,43 @@ jobs:
           git checkout main
           git reset --hard origin/main
 
+      - name: 백업 중복 실행 방지 (external 성공 시 Scheduled 스킵)
+        # schedule(내부 cron 백업)로 돌 때, 오늘(KST) 이미 '자동갱신' 커밋이 있으면
+        # external-trigger가 이미 처리한 것이므로 이번 백업은 통째로 건너뛴다.
+        #  - repository_dispatch(external) / workflow_dispatch(수동)은 항상 실행 (skip=no)
+        #  - '자동갱신' 커밋은 external/백업 실행만 남기므로, 수동 월 아카이빙 커밋과는 구분됨
+        id: skipcheck
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "→ ${{ github.event_name }} 실행 → 정상 진행"
+            echo "skip=no" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          TODAY=$(TZ='Asia/Seoul' date +%Y-%m-%d)
+          # 오늘(KST) 00:00 이후 커밋만 가볍게 받아와 확인 (shallow 유지, 실패 시 일반 fetch로 폴백)
+          git fetch origin main --shallow-since="$TODAY 00:00:00 +0900" 2>/dev/null || git fetch origin main
+          if git log origin/main --since="$TODAY 00:00:00 +0900" --grep="자동갱신" --oneline | grep -q .; then
+            echo "→ 오늘 이미 자동갱신 완료됨 (external 성공) → 백업 스킵"
+            echo "skip=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "→ 오늘 자동갱신 기록 없음 → 백업 실행"
+            echo "skip=no" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Python 설치
+        if: steps.skipcheck.outputs.skip != 'yes'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: 의존성 설치
+        if: steps.skipcheck.outputs.skip != 'yes'
         run: pip install requests
 
       - name: 아카이브 갱신 여부 결정 (KST 토요일만, 수동 실행 제외)
         # 외부 트리거/스케줄로 돌 때 KST 요일이 토요일이면 아카이브 자동 갱신 켬.
         # 수동 실행(workflow_dispatch)은 MONTH_TAG로 제어하므로 여기선 제외.
+        if: steps.skipcheck.outputs.skip != 'yes'
         run: |
           DOW=$(TZ='Asia/Seoul' date +%u)   # 1=월 … 6=토, 7=일
           if [ "${{ github.event_name }}" != "workflow_dispatch" ] && [ "$DOW" = "6" ]; then
@@ -78,11 +104,12 @@ jobs:
           fi
 
       - name: 광고 데이터 수집 및 HTML 생성
+        if: steps.skipcheck.outputs.skip != 'yes'
         env:
           META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
           META_AD_ACCOUNT_ID: ${{ secrets.META_AD_ACCOUNT_ID }}
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
-          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          SLACK_DM_USER_IDS: ${{ secrets.SLACK_DM_USER_IDS }}
           MONTH_TAG: ${{ github.event.inputs.month_tag }}
           MEDIA_MODE: ${{ github.event.inputs.media_mode }}
           DATE_START: ${{ github.event.inputs.date_start }}
@@ -91,6 +118,7 @@ jobs:
         run: python fetch_ads.py
 
       - name: 결과 커밋 & 푸시
+        if: steps.skipcheck.outputs.skip != 'yes'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
